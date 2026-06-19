@@ -608,6 +608,7 @@
                 <input type="text" id="syncCodeInput" placeholder="输入同步码 (两台设备用同一个)" autocomplete="off"
                     style="flex:1;min-width:150px;padding:8px 12px;border-radius:10px;border:2px solid rgba(255,215,0,0.3);background:rgba(255,255,255,0.1);color:white;font-size:0.9rem;font-family:'Nunito',sans-serif;outline:none">
                 <button class="treasure-close-btn" style="background:linear-gradient(135deg,#FFD700,#FFA000);color:#333;font-size:0.85rem;padding:8px 16px" onclick="applySyncCode()">连接</button>
+                <button class="treasure-close-btn" style="background:linear-gradient(135deg,#43e97b,#38f9d7);color:#333;font-size:0.85rem;padding:8px 16px" onclick="cloudPushManual()">&#11014;&#65039; 上传本机</button>
                 <button class="treasure-close-btn" style="background:rgba(255,255,255,0.15);color:white;font-size:0.85rem;padding:8px 16px" onclick="cloudPullManual()">&#11015;&#65039; 拉取云端</button>
             </div>
             <div id="cloudSyncStatus" style="margin-top:8px;font-size:0.8rem;text-align:center;color:rgba(255,255,255,0.55)">未配置云同步 (仅本机存档)</div>
@@ -2356,13 +2357,42 @@ async function cloudPull() {
     return rows && rows.length ? rows[0].payload : null;
 }
 
-// 启动时同步: 比较版本号, 谁新用谁
+// 判断一份存档是否"空白"(无宝物/无投资/无现金) —— 用于防止空数据覆盖有数据
+function saveLooksEmpty(s) {
+    if (!s) return true;
+    const t = (s.treasures && s.treasures.length) || 0;
+    const inv = (s.investments && s.investments.length) || 0;
+    return t === 0 && inv === 0 && (s.cash || 0) === 0 && (s.withdrawable || 0) === 0;
+}
+function localLooksEmpty() {
+    return treasureCollection.length === 0 && investments.length === 0
+        && (cashBalance || 0) === 0 && (withdrawable || 0) === 0;
+}
+
+// 启动时同步 —— 安全规则: 空数据永远不能覆盖非空的一方
 async function cloudSyncOnLoad() {
     if (!cloudEnabled()) return;
     setCloudStatus('☁️ 检查云端存档...', '#FFD700');
     try {
         const cloud = await cloudPull();
-        if (!cloud) { await cloudPush(); return; }
+        const localEmpty = localLooksEmpty();
+        // 1) 云端没有或为空白
+        if (saveLooksEmpty(cloud)) {
+            if (!localEmpty) { await cloudPush(); setCloudStatus('✅ 已用本机存档初始化云端', '#43e97b'); }
+            else setCloudStatus('云端与本机均为空白', 'rgba(255,255,255,0.55)');
+            return;
+        }
+        // 2) 云端有有效数据, 本地空白 → 直接采用云端 (无视版本号, 防止残留版本号误判)
+        if (localEmpty) {
+            applyingCloud = true;
+            applySaveObject(cloud);
+            applyingCloud = false;
+            seaSyncVersion = cloud._v || Date.now();
+            localStorage.setItem('seaSyncVersion', seaSyncVersion);
+            setCloudStatus('✅ 已载入云端存档', '#43e97b');
+            return;
+        }
+        // 3) 两边都有数据 → 版本新者为准
         const cloudV = cloud._v || 0;
         if (cloudV > seaSyncVersion) {
             applyingCloud = true;
@@ -2379,6 +2409,16 @@ async function cloudSyncOnLoad() {
     } catch (e) {
         setCloudStatus('⚠️ 连接云端失败 (离线也可玩)', '#ff6b6b');
     }
+}
+
+// 手动: 强制把本机存档上传覆盖云端 (本机有进度想推上去时用)
+async function cloudPushManual() {
+    if (!cloudEnabled()) { setCloudStatus('请先设置同步码', '#ff6b6b'); return; }
+    const ok = confirm('把本机存档(' + treasureCollection.length + ' 件宝物, $' + cashBalance + ')上传,覆盖云端「' + syncCode + '」?');
+    if (!ok) return;
+    seaSyncVersion = Date.now();
+    localStorage.setItem('seaSyncVersion', seaSyncVersion);
+    await cloudPush();
 }
 
 // 用户在面板里设置/切换同步码
