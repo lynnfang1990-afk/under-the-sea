@@ -74,8 +74,8 @@
         .hud-bar { background: rgba(0,0,0,0.5); border-radius: 20px; padding: 10px 30px; display: flex; gap: 30px; color: white; font-weight: 700; font-size: 1rem; }
         .hud-item { display: flex; align-items: center; gap: 8px; }
         .game-question {
-            position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%);
-            background: rgba(255,255,255,0.95); border-radius: 25px; padding: 20px 35px;
+            position: absolute; bottom: 8%; left: 50%; transform: translateX(-50%);
+            background: rgba(255,255,255,0.95); border-radius: 25px; padding: 16px 30px;
             display: flex; align-items: center; gap: 15px; box-shadow: 0 10px 40px rgba(0,0,0,0.2); z-index: 20;
         }
         .game-q-text { font-size: 2.2rem; font-weight: 900; color: #333; }
@@ -426,8 +426,8 @@
         .treasure-modal-card {
             background: linear-gradient(180deg, #1a3a5c, #0d2137);
             border: 3px solid rgba(255,215,0,0.4);
-            border-radius: 30px; padding: 30px; text-align: center;
-            max-width: 550px; width: 92%; max-height: 80vh;
+            border-radius: 30px; padding: 18px 22px; text-align: center;
+            max-width: 550px; width: 92%; max-height: 92vh;
             box-shadow: 0 20px 60px rgba(0,0,0,0.5); animation: slideUp 0.4s ease-out;
             overflow-y: auto;
         }
@@ -626,8 +626,8 @@
             </div>
             <div id="cloudSyncStatus" style="margin-top:8px;font-size:0.8rem;text-align:center;color:rgba(255,255,255,0.55)">未配置云同步 (仅本机存档)</div>
         </div>
-        <!-- Data buttons -->
-        <div style="display:flex;gap:10px;justify-content:center;margin-top:15px">
+        <!-- Data buttons (吸底: 列表再长, 关闭等按钮始终可见) -->
+        <div style="position:sticky;bottom:-18px;display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-top:15px;padding:12px 0 4px;background:linear-gradient(180deg, rgba(13,33,55,0) 0%, #0d2137 35%)">
             <button class="treasure-close-btn" style="background:linear-gradient(135deg,#667eea,#764ba2);color:white;font-size:0.85rem;padding:8px 18px" onclick="exportAllData()">&#128190; 导出数据</button>
             <label class="treasure-close-btn" style="background:linear-gradient(135deg,#43e97b,#38f9d7);color:#333;font-size:0.85rem;padding:8px 18px;cursor:pointer">&#128194; 导入数据<input type="file" accept=".json" onchange="importAllData(event)" style="display:none"></label>
             <button class="treasure-close-btn" onclick="closeTreasureModal()">关闭</button>
