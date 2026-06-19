@@ -1,0 +1,2575 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>算术小冒险</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;700;900&display=swap');
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Nunito', sans-serif; overflow: hidden; height: 100vh; background: #ffecd2; }
+
+        /* ===== PAGES ===== */
+        .page { display: none; width: 100vw; height: 100vh; position: absolute; top: 0; left: 0; }
+        .page.active { display: flex; flex-direction: column; align-items: center; justify-content: center; }
+
+        /* ===== HOME ===== */
+        #home { background: linear-gradient(180deg, #a8edea 0%, #fed6e3 50%, #ffecd2 100%); }
+        .home-title {
+            font-size: 3.5rem; font-weight: 900; color: #ff6b6b;
+            text-shadow: 3px 3px 0 #fff, 5px 5px 0 rgba(0,0,0,0.1);
+            margin-bottom: 10px; animation: bounceTitle 2s ease-in-out infinite;
+        }
+        .home-subtitle { font-size: 1.3rem; color: #666; margin-bottom: 40px; }
+        @keyframes bounceTitle { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-15px); } }
+        .mascot { width: 150px; height: 150px; margin-bottom: 20px; animation: float 3s ease-in-out infinite; }
+        @keyframes float { 0%, 100% { transform: translateY(0) rotate(-3deg); } 50% { transform: translateY(-20px) rotate(3deg); } }
+        .star {
+            position: absolute; width: 20px; height: 20px; background: rgba(255,255,255,0.6);
+            clip-path: polygon(50% 0%, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%);
+            animation: twinkle 2s ease-in-out infinite;
+        }
+        @keyframes twinkle { 0%, 100% { opacity: 0.3; transform: scale(0.8); } 50% { opacity: 1; transform: scale(1.2); } }
+
+        .practice-options { display: flex; gap: 25px; flex-wrap: wrap; justify-content: center; }
+        .practice-card {
+            width: 200px; height: 230px; border: none; border-radius: 25px; cursor: pointer;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            font-family: 'Nunito', sans-serif; font-weight: 700; font-size: 1.1rem; color: #fff;
+            transition: all 0.3s; box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+        }
+        .practice-card:hover { transform: translateY(-8px) scale(1.05); }
+        .practice-card.mix { background: linear-gradient(135deg, #a18cd1, #fbc2eb); }
+        .practice-card.mul { background: linear-gradient(135deg, #fccb90, #d57eeb); }
+        .practice-card .card-icon { font-size: 3.5rem; margin-bottom: 10px; }
+        .practice-card .card-desc { font-size: 0.8rem; font-weight: 400; opacity: 0.9; margin-top: 5px; }
+
+        @keyframes shake { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-10px); } 75% { transform: translateX(10px); } }
+
+        /* Feedback */
+        .feedback { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; display: none; align-items: center; justify-content: center; z-index: 100; pointer-events: none; }
+        .feedback.show { display: flex; }
+        .feedback-content { font-size: 5rem; animation: popIn 0.6s ease-out; }
+        @keyframes popIn { 0% { transform: scale(0) rotate(-20deg); opacity: 0; } 60% { transform: scale(1.3) rotate(5deg); opacity: 1; } 100% { transform: scale(1) rotate(0deg); opacity: 1; } }
+
+        @keyframes slideUp { from { transform: translateY(100px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+
+
+        /* ===== SHARED GAME UI ===== */
+        .back-btn {
+            position: absolute; top: 15px; left: 15px; width: 50px; height: 50px; border: none; border-radius: 50%;
+            background: rgba(255,255,255,0.8); font-size: 1.5rem; cursor: pointer;
+            display: flex; align-items: center; justify-content: center; transition: all 0.3s;
+            box-shadow: 0 3px 10px rgba(0,0,0,0.1); z-index: 9999;
+            padding: 0; margin: 0;
+        }
+        .back-btn::after {
+            content: ''; position: absolute;
+            top: -75px; left: -75px; width: 200px; height: 200px;
+            border-radius: 50%; cursor: pointer;
+        }
+        .back-btn:hover { transform: scale(1.1); background: white; }
+        .game-page { position: relative; width: 100vw; height: 100vh; overflow: hidden; }
+        .game-hud { position: absolute; top: 20px; left: 0; width: 100%; display: flex; justify-content: center; z-index: 10; padding: 0 80px; }
+        .hud-bar { background: rgba(0,0,0,0.5); border-radius: 20px; padding: 10px 30px; display: flex; gap: 30px; color: white; font-weight: 700; font-size: 1rem; }
+        .hud-item { display: flex; align-items: center; gap: 8px; }
+        .game-question {
+            position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%);
+            background: rgba(255,255,255,0.95); border-radius: 25px; padding: 20px 35px;
+            display: flex; align-items: center; gap: 15px; box-shadow: 0 10px 40px rgba(0,0,0,0.2); z-index: 20;
+        }
+        .game-q-text { font-size: 2.2rem; font-weight: 900; color: #333; }
+        .game-q-input { width: 80px; height: 55px; font-size: 2rem; font-weight: 900; font-family: 'Nunito', sans-serif; text-align: center; border: 3px solid #ddd; border-radius: 15px; outline: none; }
+        .game-q-input:focus { border-color: #667eea; }
+        .game-q-input.correct { border-color: #43e97b; background: #f0fff4; }
+        .game-q-input.wrong { border-color: #ff6b6b; background: #fff5f5; animation: shake 0.5s; }
+        .game-q-btn { width: 55px; height: 55px; border: none; border-radius: 50%; background: linear-gradient(135deg, #667eea, #764ba2); color: white; font-size: 1.5rem; cursor: pointer; transition: all 0.3s; }
+        .game-q-btn:hover { transform: scale(1.1); }
+
+
+        /* ===== UNDER THE SEA ===== */
+        #sea-game {
+            background: #0a3d62;
+            background-image: url('picture/underthesea/海底backgroup.png');
+            background-size: cover;
+            background-position: center;
+        }
+        #sea-game.active { display: block; }
+        .sea-scene { position: absolute; width: 100%; height: 100%; overflow: hidden; }
+
+        /* Swimming creatures */
+        .sea-creature {
+            position: absolute;
+            transition: opacity 0.3s;
+        }
+        .sea-creature img {
+            height: 100%;
+            width: auto;
+            object-fit: contain;
+        }
+        /* Fish facing LEFT in image -> swim left (right to left) */
+        .sea-swim-left {
+            animation: swimLeft linear infinite;
+        }
+        @keyframes swimLeft {
+            0% { transform: translateX(calc(100vw + 80px)) translateY(0); }
+            20% { transform: translateX(calc(80vw)) translateY(-12px); }
+            40% { transform: translateX(calc(55vw)) translateY(8px); }
+            60% { transform: translateX(calc(35vw)) translateY(-10px); }
+            80% { transform: translateX(calc(15vw)) translateY(6px); }
+            100% { transform: translateX(-180px) translateY(0); }
+        }
+        /* Fish facing RIGHT in image -> swim right (left to right) */
+        .sea-swim-right {
+            animation: swimRight linear infinite;
+        }
+        @keyframes swimRight {
+            0% { transform: translateX(-180px) translateY(0); }
+            20% { transform: translateX(calc(15vw)) translateY(10px); }
+            40% { transform: translateX(calc(35vw)) translateY(-12px); }
+            60% { transform: translateX(calc(55vw)) translateY(8px); }
+            80% { transform: translateX(calc(80vw)) translateY(-8px); }
+            100% { transform: translateX(calc(100vw + 80px)) translateY(0); }
+        }
+        /* Seahorse: vertical drift + slow horizontal */
+        .sea-seahorse {
+            animation: seahorseDrift linear infinite;
+        }
+        @keyframes seahorseDrift {
+            0% { transform: translateX(calc(100vw + 60px)) translateY(0); }
+            15% { transform: translateX(calc(82vw)) translateY(-20px); }
+            30% { transform: translateX(calc(65vw)) translateY(8px); }
+            45% { transform: translateX(calc(50vw)) translateY(-25px); }
+            60% { transform: translateX(calc(35vw)) translateY(5px); }
+            75% { transform: translateX(calc(20vw)) translateY(-18px); }
+            100% { transform: translateX(-60px) translateY(0); }
+        }
+        /* Seabed crawl: octopus & mermaid stay near bottom */
+        .sea-floor-creature {
+            position: absolute;
+        }
+        .sea-floor-creature img {
+            height: 100%;
+            width: auto;
+            object-fit: contain;
+            filter: drop-shadow(0 4px 8px rgba(0,0,0,0.2));
+        }
+        .sea-crawl-right {
+            animation: crawlRight ease-in-out infinite alternate;
+        }
+        @keyframes crawlRight {
+            0% { transform: translateX(0) translateY(0); }
+            25% { transform: translateX(15vw) translateY(-20px); }
+            50% { transform: translateX(25vw) translateY(10px); }
+            75% { transform: translateX(35vw) translateY(-15px); }
+            100% { transform: translateX(40vw) translateY(0); }
+        }
+        .sea-crawl-left {
+            animation: crawlLeft ease-in-out infinite alternate;
+        }
+        @keyframes crawlLeft {
+            0% { transform: translateX(0) translateY(0); }
+            25% { transform: translateX(-12vw) translateY(-18px); }
+            50% { transform: translateX(-22vw) translateY(8px); }
+            75% { transform: translateX(-30vw) translateY(-12px); }
+            100% { transform: translateX(-38vw) translateY(0); }
+        }
+        .sea-crawl-wander {
+            animation: crawlWander ease-in-out infinite;
+        }
+        @keyframes crawlWander {
+            0% { transform: translateX(0) translateY(0); }
+            20% { transform: translateX(12vw) translateY(-25px); }
+            40% { transform: translateX(5vw) translateY(15px); }
+            60% { transform: translateX(-10vw) translateY(-20px); }
+            80% { transform: translateX(-5vw) translateY(10px); }
+            100% { transform: translateX(0) translateY(0); }
+        }
+
+        /* Floor treasures */
+        .sea-floor-item {
+            position: absolute;
+            bottom: 30px;
+            animation: gentleBob 3s ease-in-out infinite;
+            cursor: default;
+        }
+        .sea-floor-item img {
+            height: 100%;
+            width: auto;
+            object-fit: contain;
+            filter: drop-shadow(0 4px 8px rgba(0,0,0,0.3));
+        }
+        @keyframes gentleBob {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-6px); }
+        }
+
+        /* Treasure box button */
+        .treasure-box-btn {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            width: 80px;
+            height: 80px;
+            border: none;
+            background: none;
+            cursor: pointer;
+            z-index: 15;
+            transition: transform 0.3s;
+            filter: drop-shadow(0 4px 10px rgba(0,0,0,0.4));
+        }
+        .treasure-box-btn:hover { transform: scale(1.15); }
+        .treasure-box-btn img { width: 100%; height: 100%; object-fit: contain; }
+        .treasure-box-count {
+            position: absolute;
+            top: -5px; right: -5px;
+            background: #ff6b6b;
+            color: white;
+            width: 28px; height: 28px;
+            border-radius: 50%;
+            font-size: 0.85rem;
+            font-weight: 900;
+            display: flex; align-items: center; justify-content: center;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+        }
+
+        /* Bubbles */
+        .bubble {
+            position: absolute;
+            border-radius: 50%;
+            background: radial-gradient(circle at 30% 30%, rgba(255,255,255,0.4), rgba(255,255,255,0.1));
+            border: 1px solid rgba(255,255,255,0.2);
+            animation: bubbleRise linear infinite;
+        }
+        @keyframes bubbleRise {
+            0% { transform: translateY(0) translateX(0); opacity: 0.7; }
+            50% { transform: translateY(-40vh) translateX(15px); opacity: 0.5; }
+            100% { transform: translateY(-85vh) translateX(-10px); opacity: 0; }
+        }
+
+        /* Magic animal: full-screen slow wander (excluding bottom 15%) */
+        .sea-magic-wander {
+            animation: magicWander ease-in-out infinite;
+        }
+        @keyframes magicWander {
+            0%  { transform: translate(0, 0); }
+            15% { transform: translate(15vw, -12vh); }
+            30% { transform: translate(-8vw, -25vh); }
+            45% { transform: translate(20vw, -35vh); }
+            60% { transform: translate(-5vw, -15vh); }
+            75% { transform: translate(10vw, -40vh); }
+            100%{ transform: translate(0, 0); }
+        }
+
+        /* === UNDERWATER LIGHT SYSTEM (4 layers) === */
+        /* Layer 1: God Rays - 5 beams from surface */
+        .sea-godray-container { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 2; }
+        .sea-godray {
+            position: absolute; top: -20%; height: 120%;
+            background: linear-gradient(180deg, rgba(255,255,200,0.35) 0%, rgba(255,255,200,0.15) 20%, rgba(173,220,255,0.08) 50%, transparent 80%);
+            transform-origin: top center; filter: blur(15px);
+        }
+        .sea-godray:nth-child(1) { left: 3%; width: 22%; animation: seaRay1 7s ease-in-out infinite; }
+        .sea-godray:nth-child(2) { left: 20%; width: 15%; animation: seaRay2 9s ease-in-out 1s infinite; }
+        .sea-godray:nth-child(3) { left: 38%; width: 25%; animation: seaRay1 8s ease-in-out 2s infinite; }
+        .sea-godray:nth-child(4) { left: 58%; width: 18%; animation: seaRay2 6s ease-in-out 0.5s infinite; }
+        .sea-godray:nth-child(5) { left: 75%; width: 20%; animation: seaRay1 10s ease-in-out 3s infinite; }
+        @keyframes seaRay1 {
+            0%  { transform: rotate(-6deg) scaleX(0.8); opacity: 0.2; }
+            30% { transform: rotate(8deg) scaleX(1.3); opacity: 1; }
+            60% { transform: rotate(-2deg) scaleX(1); opacity: 0.4; }
+            100%{ transform: rotate(-6deg) scaleX(0.8); opacity: 0.2; }
+        }
+        @keyframes seaRay2 {
+            0%  { transform: rotate(7deg) scaleX(1.2); opacity: 0.3; }
+            40% { transform: rotate(-8deg) scaleX(0.7); opacity: 0.9; }
+            70% { transform: rotate(5deg) scaleX(1.4); opacity: 1; }
+            100%{ transform: rotate(7deg) scaleX(1.2); opacity: 0.3; }
+        }
+        /* Layer 2: Canvas Caustics (rendered via JS) */
+        .sea-caustic-canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 3; }
+        /* Layer 3: Moving light hotspot */
+        .sea-hotspot {
+            position: absolute; z-index: 4; pointer-events: none;
+            width: 60vw; height: 50vh; top: -5%;
+            background: radial-gradient(ellipse at center, rgba(255,255,220,0.25) 0%, rgba(255,255,220,0.08) 40%, transparent 70%);
+            filter: blur(30px);
+            animation: seaHotMove 12s ease-in-out infinite;
+        }
+        @keyframes seaHotMove {
+            0%  { left: -10%; opacity: 0.5; transform: scale(1); }
+            25% { left: 15%; opacity: 1; transform: scale(1.2); }
+            50% { left: 40%; opacity: 0.6; transform: scale(0.9); }
+            75% { left: 25%; opacity: 1; transform: scale(1.3); }
+            100%{ left: -10%; opacity: 0.5; transform: scale(1); }
+        }
+        /* Layer 4: Floating light particles */
+        .sea-light-particle {
+            position: absolute; border-radius: 50%; pointer-events: none;
+            background: radial-gradient(circle, rgba(255,255,255,0.9), transparent 70%);
+        }
+        @keyframes seaParticleFloat {
+            0%  { opacity: 0; transform: translate(0, 0); }
+            20% { opacity: 0.8; }
+            100%{ opacity: 0; transform: translate(var(--pdx), -55vh); }
+        }
+
+        /* ===== COLLECTIBLE MODE: clickable creatures/treasures ===== */
+        .sea-collectible {
+            cursor: pointer !important;
+            filter: drop-shadow(0 0 12px rgba(255,215,0,0.6)) !important;
+            animation-play-state: paused !important;
+        }
+        .sea-collectible:hover {
+            filter: drop-shadow(0 0 20px rgba(255,215,0,0.9)) brightness(1.15) !important;
+            transform: scale(1.1);
+        }
+        .sea-pick-hint {
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            background: rgba(0,20,60,0.7); color: #FFD700;
+            font-size: 1.4rem; font-weight: 900; padding: 12px 30px;
+            border-radius: 20px; pointer-events: none; z-index: 25;
+            animation: bounceTitle 1.5s ease-in-out infinite;
+            text-shadow: 0 2px 8px rgba(0,0,0,0.5);
+            white-space: nowrap;
+        }
+        /* Frozen (thawed/unfrozen) items - can't be picked */
+        .sea-thawed {
+            filter: brightness(0.5) saturate(0.3) !important;
+            cursor: default !important;
+            pointer-events: none !important;
+            opacity: 0.5 !important;
+            transition: filter 0.6s, opacity 0.6s;
+        }
+        /* Countdown timer - number overlaid on starfish white sign */
+        .sea-timer {
+            position: absolute; top: 65px; left: 10px; z-index: 30;
+            width: 160px; height: 160px;
+            user-select: none;
+        }
+        .sea-timer img {
+            width: 100%; height: 100%; object-fit: contain;
+            filter: drop-shadow(0 4px 12px rgba(0,0,0,0.4));
+        }
+        .sea-timer-num {
+            position: absolute;
+            /* White sign: center 50%,60% of image, size 74%x26% */
+            top: 48%; left: 14%;
+            width: 73%; height: 25%;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 2.2rem; font-weight: 900;
+            color: #e67e22;
+            text-shadow: 2px 2px 0 rgba(255,255,255,0.6);
+            letter-spacing: 2px;
+        }
+        .sea-timer.warning .sea-timer-num {
+            color: #ff3333;
+            animation: timerPulse 0.5s ease-in-out infinite alternate;
+        }
+        .sea-timer.warning img {
+            animation: timerShake 0.4s ease-in-out infinite alternate;
+        }
+        @keyframes timerPulse {
+            from { transform: scale(1); }
+            to { transform: scale(1.2); }
+        }
+        @keyframes timerShake {
+            from { transform: rotate(-5deg); }
+            to { transform: rotate(5deg); }
+        }
+        /* Lost item big display */
+        .lost-item-big {
+            position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            z-index: 350; pointer-events: none;
+            animation: lostFadeOut 2.5s ease-out forwards;
+        }
+        .lost-item-big img { width: 120px; height: 120px; object-fit: contain; filter: drop-shadow(0 0 20px rgba(255,0,0,0.5)); }
+        .lost-item-big .lost-text { color: #ff6b6b; font-size: 1.5rem; font-weight: 900; margin-top: 10px; text-shadow: 0 2px 8px rgba(0,0,0,0.5); }
+        @keyframes lostFadeOut {
+            0% { opacity: 1; transform: scale(1); }
+            70% { opacity: 1; transform: scale(1.1); }
+            100% { opacity: 0; transform: scale(0.5) translateY(-50px); }
+        }
+        /* No text selection in game */
+        #sea-game { user-select: none; -webkit-user-select: none; }
+        .treasure-modal-card { user-select: none; -webkit-user-select: none; }
+        /* Fly-to-box animation */
+        .fly-to-box {
+            position: fixed; z-index: 350; pointer-events: none;
+            transition: all 0.8s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+        }
+        .fly-to-box img { width: 60px; height: 60px; object-fit: contain; }
+        .fly-to-box.flying { transform: scale(0.4); opacity: 0.6; }
+
+        /* ===== TREASURE BOX MODAL ===== */
+        .treasure-modal {
+            position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+            background: rgba(0,15,40,0.85); display: none;
+            align-items: center; justify-content: center; z-index: 400;
+        }
+        .treasure-modal.show { display: flex; }
+        .treasure-modal-card {
+            background: linear-gradient(180deg, #1a3a5c, #0d2137);
+            border: 3px solid rgba(255,215,0,0.4);
+            border-radius: 30px; padding: 30px; text-align: center;
+            max-width: 550px; width: 92%; max-height: 80vh;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.5); animation: slideUp 0.4s ease-out;
+            overflow-y: auto;
+        }
+        .treasure-modal-title {
+            color: #FFD700; font-size: 1.6rem; font-weight: 900; margin-bottom: 5px;
+        }
+        .treasure-modal-subtitle { color: rgba(255,255,255,0.6); font-size: 0.9rem; margin-bottom: 20px; }
+        .treasure-grid {
+            display: grid; grid-template-columns: repeat(4, 1fr);
+            gap: 12px; margin-bottom: 20px;
+        }
+        .treasure-grid-item {
+            background: rgba(255,255,255,0.08);
+            border: 2px solid rgba(255,255,255,0.1);
+            border-radius: 15px; padding: 10px;
+            display: flex; flex-direction: column;
+            align-items: center; justify-content: center;
+            min-height: 100px;
+            transition: all 0.3s;
+        }
+        .treasure-grid-item:hover { background: rgba(255,255,255,0.15); border-color: rgba(255,215,0,0.4); }
+        .treasure-grid-item img { width: 60px; height: 60px; object-fit: contain; }
+        .treasure-grid-item .item-label { color: rgba(255,255,255,0.7); font-size: 0.7rem; margin-top: 5px; }
+        .treasure-grid-item .item-count { color: #FFD700; font-size: 0.75rem; font-weight: 700; }
+        .treasure-empty {
+            color: rgba(255,255,255,0.4); font-size: 1.1rem; padding: 40px 0;
+        }
+        .treasure-close-btn {
+            padding: 12px 35px; border: none; border-radius: 20px;
+            background: linear-gradient(135deg, #FFD700, #FFA500);
+            color: #333; font-family: 'Nunito', sans-serif; font-weight: 700;
+            font-size: 1rem; cursor: pointer; transition: all 0.3s;
+        }
+        .treasure-close-btn:hover { transform: translateY(-3px); }
+        .sell-btn {
+            padding: 4px 10px; border: none; border-radius: 8px;
+            background: linear-gradient(135deg, #ff6b6b, #ee5a24); color: white;
+            font-family: 'Nunito', sans-serif; font-weight: 700; font-size: 0.7rem;
+            cursor: pointer; transition: all 0.2s; margin-top: 4px;
+        }
+        .sell-btn:hover { transform: scale(1.1); }
+        .item-price { color: #4CAF50; font-size: 0.75rem; font-weight: 700; }
+        /* Invest styles */
+        .stock-card {
+            background: rgba(255,255,255,0.08); border: 2px solid rgba(255,255,255,0.1);
+            border-radius: 14px; padding: 12px; margin-bottom: 10px;
+            display: flex; align-items: center; justify-content: space-between; gap: 10px;
+        }
+        .stock-card:hover { border-color: rgba(255,215,0,0.3); }
+        .stock-name { color: white; font-weight: 700; font-size: 0.95rem; min-width: 70px; }
+        .stock-price { color: #4CAF50; font-size: 0.85rem; }
+        .stock-input {
+            width: 80px; padding: 6px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.2);
+            background: rgba(255,255,255,0.1); color: white; font-family: 'Nunito', sans-serif;
+            font-size: 0.85rem; text-align: center; outline: none;
+        }
+        .stock-buy-btn {
+            padding: 6px 14px; border: none; border-radius: 8px;
+            background: linear-gradient(135deg, #4CAF50, #45a049); color: white;
+            font-family: 'Nunito', sans-serif; font-weight: 700; font-size: 0.8rem; cursor: pointer;
+        }
+        .stock-buy-btn:hover { transform: scale(1.05); }
+        .holding-row {
+            background: rgba(255,255,255,0.05); border-radius: 10px; padding: 8px 12px;
+            margin-top: 6px; display: flex; justify-content: space-between; align-items: center;
+            font-size: 0.8rem; color: rgba(255,255,255,0.8);
+        }
+        .pnl-pos { color: #4CAF50; } .pnl-neg { color: #ff6b6b; }
+
+        /* Lost item animation */
+        .lost-item-anim {
+            position: fixed; z-index: 350; pointer-events: none;
+            animation: floatAway 1.5s ease-out forwards;
+        }
+        .lost-item-anim img { width: 80px; height: 80px; object-fit: contain; }
+        @keyframes floatAway {
+            0% { transform: scale(1) translateY(0); opacity: 1; }
+            50% { transform: scale(1.2) translateY(-30px); opacity: 0.8; }
+            100% { transform: scale(0.3) translateY(-120px) rotate(40deg); opacity: 0; }
+        }
+
+    </style>
+</head>
+<body>
+
+<!-- ===== HOME ===== -->
+<div id="home" class="page active">
+    <div class="star" style="top:10%;left:10%"></div>
+    <div class="star" style="top:15%;right:15%;animation-delay:0.5s"></div>
+    <div class="star" style="top:25%;left:30%;animation-delay:1s;width:15px;height:15px"></div>
+    <div class="star" style="top:8%;right:35%;animation-delay:1.5s;width:12px;height:12px"></div>
+    <svg class="mascot" viewBox="0 0 150 150">
+        <circle cx="75" cy="85" r="45" fill="#FFD93D" stroke="#E8A317" stroke-width="3"/>
+        <ellipse cx="60" cy="75" rx="8" ry="10" fill="white"/><ellipse cx="90" cy="75" rx="8" ry="10" fill="white"/>
+        <circle cx="62" cy="77" r="5" fill="#333"/><circle cx="92" cy="77" r="5" fill="#333"/>
+        <circle cx="64" cy="75" r="2" fill="white"/><circle cx="94" cy="75" r="2" fill="white"/>
+        <ellipse cx="48" cy="90" rx="10" ry="6" fill="#FFB3B3" opacity="0.6"/>
+        <ellipse cx="102" cy="90" rx="10" ry="6" fill="#FFB3B3" opacity="0.6"/>
+        <path d="M60 95 Q75 112 90 95" stroke="#333" stroke-width="3" fill="none" stroke-linecap="round"/>
+        <ellipse cx="75" cy="48" rx="35" ry="8" fill="#FF6B6B"/>
+        <rect x="55" y="20" width="40" height="30" rx="8" fill="#FF6B6B"/>
+        <text x="75" y="42" text-anchor="middle" fill="white" font-size="16" font-weight="900">+</text>
+        <circle cx="30" cy="100" r="10" fill="#FFD93D" stroke="#E8A317" stroke-width="2"/>
+        <circle cx="120" cy="100" r="10" fill="#FFD93D" stroke="#E8A317" stroke-width="2"/>
+        <ellipse cx="60" cy="132" rx="14" ry="8" fill="#FF6B6B"/>
+        <ellipse cx="90" cy="132" rx="14" ry="8" fill="#FF6B6B"/>
+    </svg>
+    <h1 class="home-title">&#127754; Under the Sea</h1>
+    <p class="home-subtitle">选择题目类型，开始海底探宝!</p>
+    <div class="practice-options">
+        <button class="practice-card mix" onclick="startSea('mix')">
+            <span class="card-icon">&#10133;&#10134;</span>加减法<span class="card-desc">20以内加减法混合</span>
+        </button>
+        <button class="practice-card mul" onclick="startSea('mul')">
+            <span class="card-icon">&#10006;</span>乘法口诀<span class="card-desc">1~4的乘法表</span>
+        </button>
+    </div>
+</div>
+
+<!-- ===== UNDER THE SEA (唯一场景) ===== -->
+<div id="sea-game" class="page game-page">
+    <button class="back-btn" onclick="exitSea()" style="background:rgba(255,255,255,0.2);color:white">&#x2190;</button>
+
+    <!-- Treasure box button -->
+    <button class="treasure-box-btn" id="treasureBoxBtn" onclick="openTreasureModal()">
+        <img id="treasureBoxImg" src="picture/underthesea/treasury bod empty.png" alt="Treasure Box">
+        <div class="treasure-box-count" id="treasureBoxCount">0</div>
+    </button>
+
+    <div class="game-hud"><div class="hud-bar" style="background:rgba(0,20,80,0.6)">
+        <div class="hud-item"><span>&#11088;</span> 正确: <span id="sea-correct">0</span></div>
+        <div class="hud-item"><span>&#10060;</span> 错误: <span id="sea-wrong">0</span></div>
+        <div class="hud-item"><span>&#127754;</span> Under the Sea</div>
+    </div></div>
+
+    <!-- Timers -->
+    <div class="sea-timer" id="seaQuestionTimer" style="display:none">
+        <img src="picture/underthesea/countdown.png" alt="timer">
+        <div class="sea-timer-num" id="seaTimerText">30</div>
+    </div>
+    <div class="sea-pick-hint" id="seaPickHint" style="display:none">&#128073; 点击一个宝藏收集!</div>
+    <div class="sea-scene" id="seaScene">
+        <!-- 4-layer underwater light system -->
+        <div class="sea-godray-container">
+            <div class="sea-godray"></div><div class="sea-godray"></div><div class="sea-godray"></div>
+            <div class="sea-godray"></div><div class="sea-godray"></div>
+        </div>
+        <canvas class="sea-caustic-canvas" id="seaCausticCanvas"></canvas>
+        <div class="sea-hotspot"></div>
+        <!-- Bubbles -->
+        <div id="bubblesContainer"></div>
+        <!-- Swimming creatures -->
+        <div id="seaCreaturesContainer"></div>
+        <!-- Floor items -->
+        <div id="seaFloorContainer"></div>
+    </div>
+
+    <div class="game-question" id="seaQuestion" style="background:rgba(255,255,255,0.92)">
+        <span class="game-q-text" id="sea-q-text">3 + 5 = </span>
+        <input type="number" class="game-q-input" id="sea-q-input" autocomplete="off" inputmode="numeric">
+        <button class="game-q-btn" onclick="checkSeaAnswer()">&#10004;</button>
+    </div>
+</div>
+
+
+<!-- ===== TREASURE BOX MODAL (with sell + invest) ===== -->
+<div class="treasure-modal" id="treasureModal">
+    <div class="treasure-modal-card">
+        <!-- Tab bar -->
+        <div style="display:flex;gap:0;margin-bottom:15px;border-radius:14px;overflow:hidden;border:2px solid rgba(255,215,0,0.3)">
+            <button class="tab-btn active" onclick="switchTab('items')" id="tabItems" style="flex:1;padding:10px;border:none;font-family:'Nunito',sans-serif;font-weight:700;font-size:0.95rem;cursor:pointer;background:rgba(255,215,0,0.2);color:#FFD700">&#128240; 宝藏箱</button>
+            <button class="tab-btn" onclick="switchTab('invest')" id="tabInvest" style="flex:1;padding:10px;border:none;font-family:'Nunito',sans-serif;font-weight:700;font-size:0.95rem;cursor:pointer;background:rgba(255,255,255,0.05);color:rgba(255,255,255,0.5)">&#128200; 投资</button>
+        </div>
+        <!-- Financial summary -->
+        <div style="display:flex;flex-wrap:wrap;justify-content:center;gap:8px 16px;margin-bottom:12px;font-size:0.85rem">
+            <span style="color:white;font-weight:700" title="现金+投资市值">&#128176; 总金额: $<span id="totalValueDisplay">0</span></span>
+            <span id="totalPnlDisplay" style="font-weight:700" title="存款复利+股票MtM">&#128200; 总P&L: $0</span>
+            <span style="color:#4CAF50;font-weight:700">&#128181; 可投资: $<span id="cashDisplay">0</span></span>
+            <span style="color:#FFD700;font-weight:700;cursor:pointer;text-decoration:underline" onclick="showWithdraw()" title="已实现收益，可提现">&#128179; 可取现: $<span id="withdrawableDisplay">0</span></span>
+        </div>
+        <div class="treasure-modal-subtitle" id="treasureModalSubtitle"></div>
+        <!-- Items tab -->
+        <div id="itemsTabContent"><div id="treasureGridContainer"></div></div>
+        <!-- Invest tab -->
+        <div id="investTabContent" style="display:none">
+            <div id="investContent"></div>
+        </div>
+        <!-- Cloud sync (Supabase + 同步码) -->
+        <div style="margin-top:16px;padding:12px 14px;border-radius:14px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.12)">
+            <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:center">
+                <span style="color:rgba(255,255,255,0.8);font-weight:700;font-size:0.85rem">&#9729;&#65039; 云同步</span>
+                <input type="text" id="syncCodeInput" placeholder="输入同步码 (两台设备用同一个)" autocomplete="off"
+                    style="flex:1;min-width:150px;padding:8px 12px;border-radius:10px;border:2px solid rgba(255,215,0,0.3);background:rgba(255,255,255,0.1);color:white;font-size:0.9rem;font-family:'Nunito',sans-serif;outline:none">
+                <button class="treasure-close-btn" style="background:linear-gradient(135deg,#FFD700,#FFA000);color:#333;font-size:0.85rem;padding:8px 16px" onclick="applySyncCode()">连接</button>
+                <button class="treasure-close-btn" style="background:rgba(255,255,255,0.15);color:white;font-size:0.85rem;padding:8px 16px" onclick="cloudPullManual()">&#11015;&#65039; 拉取云端</button>
+            </div>
+            <div id="cloudSyncStatus" style="margin-top:8px;font-size:0.8rem;text-align:center;color:rgba(255,255,255,0.55)">未配置云同步 (仅本机存档)</div>
+        </div>
+        <!-- Data buttons -->
+        <div style="display:flex;gap:10px;justify-content:center;margin-top:15px">
+            <button class="treasure-close-btn" style="background:linear-gradient(135deg,#667eea,#764ba2);color:white;font-size:0.85rem;padding:8px 18px" onclick="exportAllData()">&#128190; 导出数据</button>
+            <label class="treasure-close-btn" style="background:linear-gradient(135deg,#43e97b,#38f9d7);color:#333;font-size:0.85rem;padding:8px 18px;cursor:pointer">&#128194; 导入数据<input type="file" accept=".json" onchange="importAllData(event)" style="display:none"></label>
+            <button class="treasure-close-btn" onclick="closeTreasureModal()">关闭</button>
+        </div>
+    </div>
+</div>
+<!-- Withdraw dialog -->
+<div class="treasure-modal" id="withdrawDialog" style="z-index:450">
+    <div class="treasure-modal-card" style="max-width:350px">
+        <div class="treasure-modal-title">&#128179; 提现</div>
+        <div style="color:rgba(255,255,255,0.7);margin-bottom:15px">可取现金额: $<span id="withdrawMax">0</span></div>
+        <input type="number" id="withdrawInput" min="0" step="1" placeholder="输入提现金额" style="width:100%;padding:12px;border-radius:12px;border:2px solid rgba(255,215,0,0.3);background:rgba(255,255,255,0.1);color:white;font-size:1.1rem;text-align:center;font-family:'Nunito',sans-serif;outline:none;margin-bottom:15px">
+        <div style="display:flex;gap:10px;justify-content:center">
+            <button class="treasure-close-btn" style="background:#f0f0f0;color:#666" onclick="document.getElementById('withdrawDialog').classList.remove('show')">取消</button>
+            <button class="treasure-close-btn" onclick="confirmWithdraw()">确认提现</button>
+        </div>
+    </div>
+</div>
+
+<!-- Daily settlement modal -->
+<div class="treasure-modal" id="settleModal" style="z-index:460">
+    <div class="treasure-modal-card" style="max-width:480px">
+        <div class="treasure-modal-title">&#127748; 每日结算</div>
+        <div id="settleModalBody" style="color:rgba(255,255,255,0.85);margin:15px 0;text-align:left;max-height:50vh;overflow-y:auto;font-size:0.95rem;line-height:1.6"></div>
+        <div style="display:flex;gap:10px;justify-content:center;margin-top:15px">
+            <button class="treasure-close-btn" onclick="document.getElementById('settleModal').classList.remove('show')">知道了</button>
+        </div>
+    </div>
+</div>
+
+<!-- ===== SHARED OVERLAYS ===== -->
+<div class="feedback" id="feedback"><div class="feedback-content" id="feedbackContent"></div></div>
+
+<script>
+const IMG = 'picture/underthesea/';
+
+// ===== GLOBAL STATE =====
+let currentPage = 'home';
+let adventureType = 'mix'; // 'mix' = 加减法, 'mul' = 乘法口诀
+
+// Sea state
+let seaCorrect = 0, seaWrong = 0, seaQuestion = null;
+let seaAnimTimers = [];
+
+// Treasure collection (persisted)
+let treasureCollection = JSON.parse(localStorage.getItem('seaTreasures') || '[]');
+
+// ===== SEA ASSET DATA =====
+// Sea animals (new set): facing, type (swim/seahorse/floor/jellyfish), sizeRange, speed, topRange
+// topRange capped at 70% to avoid overlapping the bottom question area (~15% height)
+const SEA_ANIMALS = [
+    { id: 'sa1',  name: '章鱼',     img: 'sea animal 1.png',  facing: 'front', type: 'floor',     sizeRange: [120, 175], speed: [15, 25] },
+    { id: 'sa2',  name: '水母',     img: 'sea animal 2.png',  facing: 'front', type: 'jellyfish', sizeRange: [85, 140],  speed: [20, 35], topRange: [5, 45] },
+    { id: 'sa3',  name: '灯笼鱼',   img: 'sea animal 3.png',  facing: 'left',  type: 'swim',      sizeRange: [80, 130],  speed: [14, 22], topRange: [15, 55] },
+    { id: 'sa4',  name: '海星',     img: 'sea animal 4.png',  facing: 'front', type: 'floor',     sizeRange: [65, 100],  speed: [30, 50] },
+    { id: 'sa5',  name: '寄居蟹',   img: 'sea animal 5.png',  facing: 'left',  type: 'floor',     sizeRange: [75, 110],  speed: [20, 35] },
+    { id: 'sa6',  name: '螃蟹',     img: 'sea animal 6.png',  facing: 'front', type: 'floor',     sizeRange: [85, 120],  speed: [18, 30] },
+    { id: 'sa7',  name: '河豚',     img: 'sea animal 7.png',  facing: 'front', type: 'swim',      sizeRange: [80, 130],  speed: [20, 32], topRange: [12, 50] },
+    { id: 'sa8',  name: '海胆',     img: 'sea animal 8.png',  facing: 'front', type: 'floor',     sizeRange: [55, 85],   speed: [35, 55] },
+    { id: 'sa9',  name: '电鳗',     img: 'sea animal 9.png',  facing: 'left',  type: 'swim',      sizeRange: [100, 170], speed: [10, 18], topRange: [20, 55] },
+    { id: 'sa10', name: '鲨鱼宝宝', img: 'sea animal 10.png', facing: 'left',  type: 'swim',      sizeRange: [120, 200], speed: [8, 15],  topRange: [5, 35] },
+    { id: 'sa11', name: '蝠鲼',     img: 'sea animal 11.png', facing: 'front', type: 'swim',      sizeRange: [140, 240], speed: [14, 24], topRange: [5, 30] },
+    { id: 'sa12', name: '海牛',     img: 'sea animal 12.png', facing: 'front', type: 'swim',      sizeRange: [120, 190], speed: [22, 36], topRange: [10, 40] },
+    { id: 'sa13', name: '鹦鹉鱼',   img: 'sea animal 13.png', facing: 'left',  type: 'swim',      sizeRange: [85, 150],  speed: [12, 20], topRange: [15, 50] },
+    { id: 'sa14', name: '狮子鱼',   img: 'sea animal 14.png', facing: 'left',  type: 'swim',      sizeRange: [95, 155],  speed: [16, 26], topRange: [15, 50] },
+    { id: 'sa15', name: '翻车鱼',   img: 'sea animal 15.png', facing: 'left',  type: 'swim',      sizeRange: [100, 170], speed: [20, 32], topRange: [10, 45] },
+    // Keep old favorites
+    { id: 'mermaid', name: '美人鱼', img: 'mermaid.png',       facing: 'right', type: 'floor',     sizeRange: [280, 360], speed: [16, 28] },
+    { id: 'whale',   name: '鲸鱼',  img: 'whale.png',         facing: 'right', type: 'swim',      sizeRange: [220, 350], speed: [25, 38], topRange: [3, 18] },
+    { id: 'seahorse1', name: '橙色海马', img: 'seahorse1.png', facing: 'left',  type: 'seahorse',  sizeRange: [55, 90],   speed: [25, 40], topRange: [15, 50] },
+    { id: 'seahorse2', name: '蓝色海马', img: 'seahorse2.png', facing: 'left',  type: 'seahorse',  sizeRange: [50, 85],   speed: [28, 42], topRange: [20, 55] },
+    // Magic Animals - legendary floor creatures, same range as mermaid
+    { id: 'ma1', name: '猫头鹰鱼', img: 'Magic animal 1.png', facing: 'right', type: 'floor', sizeRange: [196, 252], speed: [18, 30] },
+    { id: 'ma2', name: '水晶龙',   img: 'Magic animal 2.png', facing: 'left',  type: 'floor', sizeRange: [196, 252], speed: [20, 32] },
+    { id: 'ma3', name: '珊瑚精灵', img: 'Magic animal 3.png', facing: 'front', type: 'floor', sizeRange: [196, 252], speed: [18, 28] },
+    { id: 'ma4', name: '宝石鱿鱼', img: 'Magic animal 4.png', facing: 'front', type: 'floor', sizeRange: [196, 252], speed: [20, 30] },
+    { id: 'ma5', name: '珍珠水母', img: 'Magic animal 5.png', facing: 'front', type: 'floor', sizeRange: [196, 252], speed: [18, 28] },
+    { id: 'ma6', name: '月光水母', img: 'Magic animal 6.png', facing: 'front', type: 'floor', sizeRange: [196, 252], speed: [18, 28] },
+    { id: 'ma7', name: '星辰海龙', img: 'Magic animal 7.png', facing: 'left',  type: 'floor', sizeRange: [196, 252], speed: [20, 32] },
+    { id: 'ma8', name: '魔法鱿鱼', img: 'Magic animal 8.png', facing: 'front', type: 'floor', sizeRange: [196, 252], speed: [20, 30] },
+];
+
+// Treasury items (30 from cut sheets)
+const SEA_TREASURES = [
+    // Set 1
+    { id: 'ts1_1',  name: '彩虹珍珠球',   img: 'treasures/彩虹珍珠球.png' },
+    { id: 'ts1_2',  name: '星标船舵',     img: 'treasures/星标船舵.png' },
+    { id: 'ts1_3',  name: '海星漂流瓶',   img: 'treasures/海星漂流瓶.png' },
+    { id: 'ts1_4',  name: '皮革望远镜',   img: 'treasures/皮革望远镜.png' },
+    { id: 'ts1_5',  name: '粉金海螺',     img: 'treasures/粉金海螺.png' },
+    { id: 'ts1_6',  name: '五彩水晶',     img: 'treasures/五彩水晶.png' },
+    { id: 'ts1_7',  name: '海星金袋',     img: 'treasures/海星金袋.png' },
+    { id: 'ts1_8',  name: '紫贝珠宝箱',   img: 'treasures/紫贝珠宝箱.png' },
+    { id: 'ts1_9',  name: '贝壳钥匙',     img: 'treasures/贝壳钥匙.png' },
+    { id: 'ts1_10', name: '蓝金海星勋章',  img: 'treasures/蓝金海星勋章.png' },
+    // Set 2
+    { id: 'ts2_1',  name: '珊瑚水晶球',   img: 'treasures/珊瑚水晶球.png' },
+    { id: 'ts2_2',  name: '老船舵',       img: 'treasures/老船舵.png' },
+    { id: 'ts2_3',  name: '红绳漂流瓶',   img: 'treasures/红绳漂流瓶.png' },
+    { id: 'ts2_4',  name: '海星望远镜',   img: 'treasures/海星望远镜.png' },
+    { id: 'ts2_5',  name: '金边粉海螺',   img: 'treasures/金边粉海螺.png' },
+    { id: 'ts2_6',  name: '紫水晶',       img: 'treasures/紫水晶.png' },
+    { id: 'ts2_7',  name: '蓝布金袋',     img: 'treasures/蓝布金袋.png' },
+    { id: 'ts2_8',  name: '船锚钥匙',     img: 'treasures/船锚钥匙.png' },
+    { id: 'ts2_9',  name: '宝石海星勋章',  img: 'treasures/宝石海星勋章.png' },
+    { id: 'ts2_10', name: '粉贝珠宝箱',   img: 'treasures/粉贝珠宝箱.png' },
+    // Set 3
+    { id: 'ts3_1',  name: '沉船舵轮',     img: 'treasures/沉船舵轮.png' },
+    { id: 'ts3_2',  name: '珊瑚漂流瓶',   img: 'treasures/珊瑚漂流瓶.png' },
+    { id: 'ts3_3',  name: '金光水晶球',   img: 'treasures/金光水晶球.png' },
+    { id: 'ts3_4',  name: '蓝紫水晶',     img: 'treasures/蓝紫水晶.png' },
+    { id: 'ts3_5',  name: '船锚金袋',     img: 'treasures/船锚金袋.png' },
+    { id: 'ts3_6',  name: '黑金望远镜',   img: 'treasures/黑金望远镜.png' },
+    { id: 'ts3_7',  name: '紫珠海螺',     img: 'treasures/紫珠海螺.png' },
+    { id: 'ts3_8',  name: '海星勋章',     img: 'treasures/海星勋章.png' },
+    { id: 'ts3_9',  name: '紫贝宝盒',     img: 'treasures/紫贝宝盒.png' },
+    { id: 'ts3_10', name: '船锚古钥匙',   img: 'treasures/船锚古钥匙.png' },
+];
+
+// For reward collection: swimming animals + treasures are all collectible
+const MAGIC_IDS = ['ma1','ma2','ma3','ma4','ma5','ma6','ma7','ma8'];
+const LEGENDARY_IDS = ['mermaid','ma1','ma2','ma3','ma4','ma5','ma6','ma7','ma8'];
+// Legendary collectible cooldown: 30-60s between collectible appearances
+let legendaryCollectibleAt = 0; // timestamp when next legendary can be collected
+const ALL_COLLECTIBLES = [...SEA_ANIMALS.filter(a => a.type !== 'floor' || a.id === 'mermaid' || MAGIC_IDS.includes(a.id)), ...SEA_TREASURES];
+
+// ===== NAVIGATION =====
+function showPage(pageId) {
+    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+    document.getElementById(pageId).classList.add('active');
+    currentPage = pageId;
+}
+
+// ===== QUESTION GENERATION =====
+// Question generation with carry/borrow tracking
+// carry: 5+8=13 (ones digit sum >= 10). borrow: 12-3=9 (ones digit of a < ones digit of b)
+function generateQuestion(type, forceCarry) {
+    let a, b, op, answer, hasCarry = false;
+    if (type === 'mul') {
+        a = Math.floor(Math.random() * 4) + 1; b = Math.floor(Math.random() * 9) + 1;
+        op = '\u00d7'; answer = a * b;
+    } else if (type === 'add' || (type === 'mix' && Math.random() < 0.5)) {
+        if (forceCarry) {
+            // Force carry: ones digits sum >= 10
+            const a1 = Math.floor(Math.random() * 9) + 2; // ones digit of a: 2-9 (so we can find b1)
+            const b1min = Math.max(1, 10 - a1); // minimum b ones digit to force carry
+            const b1 = b1min + Math.floor(Math.random() * (10 - b1min));
+            // a can be a1 or 10+a1 (keep sum <= 20)
+            a = (Math.random() < 0.4 && a1 + b1 <= 20) ? a1 : 10 + (a1 % 10);
+            b = b1;
+            if (a + b > 20) { a = a1; b = b1; }
+            if (a + b > 20) b = 20 - a; // safety
+            hasCarry = true;
+        } else {
+            // No carry: ones digits sum < 10
+            a = Math.floor(Math.random() * 18) + 2;
+            b = Math.floor(Math.random() * (20 - a)) + 1;
+            if ((a % 10) + (b % 10) >= 10 && !forceCarry) {
+                // Adjust to avoid carry
+                b = Math.min(b, 9 - (a % 10));
+                if (b <= 0) b = 1;
+            }
+            hasCarry = (a % 10) + (b % 10) >= 10;
+        }
+        op = '+'; answer = a + b;
+    } else {
+        // Subtraction
+        if (forceCarry) {
+            // Force borrow: ones digit of a < ones digit of b
+            a = 10 + Math.floor(Math.random() * 10); // 10-19
+            const a1 = a % 10;
+            const b1min = a1 + 1; // b ones digit > a ones digit
+            if (b1min > 9) { a = 10 + Math.floor(Math.random() * 9); }
+            const a1f = a % 10;
+            const b1 = Math.min(9, a1f + 1 + Math.floor(Math.random() * (9 - a1f)));
+            b = b1;
+            if (b >= a) b = a - 1;
+            if (b <= 0) b = 1;
+            hasCarry = (a % 10) < (b % 10);
+        } else {
+            a = Math.floor(Math.random() * 19) + 2;
+            b = Math.floor(Math.random() * a) + 1;
+            if ((a % 10) < (b % 10) && !forceCarry) {
+                b = Math.min(b, a % 10);
+                if (b <= 0) b = 1;
+            }
+            hasCarry = (a % 10) < (b % 10);
+        }
+        op = '-'; answer = a - b;
+    }
+    return { a, b, op, answer, text: `${a} ${op} ${b}`, hasCarry };
+}
+
+// Generate with 70% carry/borrow ratio for mix type
+function generateSeaQuestion() {
+    const wantCarry = Math.random() < 0.7;
+    if (adventureType === 'mul') return generateQuestion('mul');
+    return generateQuestion('mix', wantCarry);
+}
+
+function showFeedback(text) {
+    const fb = document.getElementById('feedback');
+    document.getElementById('feedbackContent').textContent = text;
+    fb.classList.add('show'); setTimeout(() => fb.classList.remove('show'), 1000);
+}
+
+// ===== UNDER THE SEA =====
+let seaPickMode = false; // true = waiting for child to click a collectible
+
+// 从落地页题型选择进入游戏
+function startSea(type) {
+    adventureType = type; // 'mix' 加减法 / 'mul' 乘法口诀
+    enterSea();
+}
+
+function enterSea() {
+    showPage('sea-game');
+    currentPage = 'sea-game';
+    seaCorrect = 0; seaWrong = 0; seaPickMode = false;
+    treasureQueue = [];
+    // First legendary collectible window opens after 30-60s
+    legendaryCollectibleAt = Date.now() + 30000 + Math.random() * 30000;
+    document.getElementById('sea-correct').textContent = '0';
+    document.getElementById('sea-wrong').textContent = '0';
+    document.getElementById('seaPickHint').style.display = 'none';
+    updateTreasureBoxUI();
+    setupSeaScene();
+    nextSeaQuestion();
+}
+
+function exitSea() {
+    seaAnimTimers.forEach(t => clearInterval(t));
+    seaAnimTimers = [];
+    seaPickMode = false;
+    clearQuestionTimer();
+    if (pickTimerId) { clearInterval(pickTimerId); pickTimerId = null; }
+    if (causticAnimId) { cancelAnimationFrame(causticAnimId); causticAnimId = null; }
+    showPage('home');
+}
+
+function randRange(min, max) { return min + Math.random() * (max - min); }
+
+// Shuffle array in place
+function shuffle(arr) { for (let i = arr.length-1; i > 0; i--) { const j = Math.floor(Math.random()*(i+1)); [arr[i],arr[j]]=[arr[j],arr[i]]; } return arr; }
+
+function createSwimmer(item, container, delay) {
+    const div = document.createElement('div');
+    div.className = 'sea-creature';
+    div.dataset.itemId = item.id;
+    div.dataset.itemName = item.name;
+    div.dataset.itemImg = item.img;
+    const size = Math.round(randRange(item.sizeRange[0], item.sizeRange[1]));
+    div.style.height = size + 'px';
+    const tr = item.topRange || [20, 55];
+    div.style.top = randRange(tr[0], tr[1]) + '%';
+    const dur = randRange(item.speed[0], item.speed[1]);
+    div.style.animationDuration = dur + 's';
+    div.style.animationDelay = (delay || 0) + 's';
+
+    // Determine swim direction based on facing
+    let swimDir; // 'left' or 'right' = actual movement direction
+    if (item.type === 'seahorse' || item.type === 'jellyfish') {
+        div.classList.add('sea-seahorse');
+        swimDir = 'left'; // seahorse drifts left
+    } else if (item.facing === 'left') {
+        div.classList.add('sea-swim-left');
+        swimDir = 'left';
+    } else if (item.facing === 'right') {
+        div.classList.add('sea-swim-right');
+        swimDir = 'right';
+    } else {
+        // front-facing: pick random direction, flip image to match
+        swimDir = Math.random() > 0.5 ? 'left' : 'right';
+        div.classList.add(swimDir === 'left' ? 'sea-swim-left' : 'sea-swim-right');
+    }
+
+    const img = document.createElement('img');
+    img.src = IMG + item.img;
+    img.alt = item.name;
+    // Always ensure image faces the swim direction:
+    // swimLeft = creature should face left. swimRight = face right.
+    // If native facing doesn't match swim direction, flip the image.
+    const needsFlip =
+        (item.facing === 'left' && swimDir === 'right') ||
+        (item.facing === 'right' && swimDir === 'left') ||
+        (item.facing === 'front' && swimDir === 'right'); // most 'front' imgs lean slightly left
+    if (needsFlip) img.style.transform = 'scaleX(-1)';
+
+    div.appendChild(img);
+    container.appendChild(div);
+    return { el: div, dur };
+}
+
+function createFloorCreature(item, container) {
+    const div = document.createElement('div');
+    div.className = 'sea-floor-creature';
+    div.dataset.itemId = item.id;
+    div.dataset.itemName = item.name;
+    div.dataset.itemImg = item.img;
+    const size = Math.round(randRange(item.sizeRange[0], item.sizeRange[1]));
+    div.style.height = size + 'px';
+    const dur = randRange(item.speed[0], item.speed[1]);
+    div.style.animationDuration = dur + 's';
+
+    const qAreaH = 120;
+    const isMagic = MAGIC_IDS.includes(item.id);
+
+    if (isMagic) {
+        // Magic animals: full screen wander (excluding question area), slower speed
+        div.classList.add('sea-magic-wander');
+        div.style.animationDuration = (dur * 1.25) + 's'; // 80% of original speed = 125% duration
+        div.style.left = (10 + Math.random() * 60) + '%';
+        div.style.bottom = (qAreaH + 20 + Math.random() * Math.round(window.innerHeight * 0.55)) + 'px';
+    } else if (item.id === 'mermaid') {
+        const crawlDir = ['sea-crawl-right', 'sea-crawl-left', 'sea-crawl-wander'][Math.floor(Math.random() * 3)];
+        div.classList.add(crawlDir);
+        div.style.left = (5 + Math.random() * 55) + '%';
+        div.style.bottom = (qAreaH + 10 + Math.random() * Math.round(window.innerHeight * 0.18)) + 'px';
+    } else {
+        const crawlDir = ['sea-crawl-wander', 'sea-crawl-right', 'sea-crawl-left'][Math.floor(Math.random() * 3)];
+        div.classList.add(crawlDir);
+        const side = Math.random() > 0.5;
+        div.style.left = side ? (5 + Math.random() * 25) + '%' : (65 + Math.random() * 25) + '%';
+        div.style.bottom = (qAreaH + Math.random() * 60) + 'px';
+    }
+
+    // Flip image to match crawl direction
+    const img = document.createElement('img');
+    img.src = IMG + item.img;
+    img.alt = item.name;
+    const movesLeft = div.classList.contains('sea-crawl-left');
+    const movesRight = div.classList.contains('sea-crawl-right');
+    if (item.facing === 'right' && movesLeft) img.style.transform = 'scaleX(-1)';
+    if (item.facing === 'left' && movesRight) img.style.transform = 'scaleX(-1)';
+
+    div.style.animationDelay = (Math.random() * 3) + 's';
+    div.appendChild(img);
+    container.appendChild(div);
+}
+
+// Treasure positions: bottom half + coral reefs on sides
+// AVOID center bottom (25%-75% left, bottom 0-12%) where the question panel sits
+const TREASURE_SPOTS = [
+    // Left coral reef
+    { left: '2%', bottom: '38%' }, { left: '5%', bottom: '28%' }, { left: '8%', bottom: '45%' },
+    { left: '3%', bottom: '18%' }, { left: '7%', bottom: '12%' },
+    // Bottom sand - LEFT side only (avoid center question area)
+    { left: '12%', bottom: '8%' }, { left: '18%', bottom: '5%' },
+    // Bottom sand - RIGHT side only
+    { left: '78%', bottom: '6%' }, { left: '85%', bottom: '8%' },
+    // Right coral reef
+    { left: '89%', bottom: '12%' }, { left: '92%', bottom: '24%' }, { left: '90%', bottom: '36%' },
+    { left: '93%', bottom: '43%' }, { left: '88%', bottom: '48%' },
+    // Mid-height scattered (left & right, avoid center-bottom)
+    { left: '15%', bottom: '32%' }, { left: '22%', bottom: '42%' },
+    { left: '75%', bottom: '30%' }, { left: '80%', bottom: '40%' },
+    // Upper-mid (above question area is safe)
+    { left: '35%', bottom: '38%' }, { left: '55%', bottom: '35%' },
+];
+
+const MAX_TREASURES_ON_SCREEN = 5;
+let treasureRefillTimer = null;
+
+// Shuffle queue with value-based cooldown
+// After a high-value item is collected, it goes on cooldown before it can reappear
+let treasureQueue = [];
+let treasureCooldowns = {}; // { itemId: timestamp when available again }
+
+function nextTreasureFromQueue() {
+    const now = Date.now();
+    // Rebuild queue excluding items on cooldown
+    if (treasureQueue.length === 0) {
+        const available = SEA_TREASURES.filter(t => {
+            const cd = treasureCooldowns[t.id];
+            return !cd || now >= cd;
+        });
+        if (available.length === 0) {
+            // All on cooldown - just pick from full list
+            treasureQueue = shuffle([...SEA_TREASURES]);
+        } else {
+            treasureQueue = shuffle([...available]);
+        }
+    }
+    return treasureQueue.pop();
+}
+
+// When an item is collected, set a cooldown based on its max price
+// Higher value = longer cooldown before reappearing
+function setTreasureCooldown(itemId) {
+    const range = PRICE_TABLE[itemId] || DEFAULT_PRICE;
+    const maxPrice = range[1];
+    // Cooldown: maxPrice * 3 seconds (e.g. $13 item = 39s, $2 item = 6s)
+    const cooldownMs = maxPrice * 300; // e.g. $180 item = 54s cooldown
+    treasureCooldowns[itemId] = Date.now() + cooldownMs;
+    // Also remove from current queue so it won't appear immediately
+    treasureQueue = treasureQueue.filter(t => t.id !== itemId);
+}
+
+function spawnTreasure(container) {
+    const item = nextTreasureFromQueue();
+    if (!item) return;
+    // Pick an unused position
+    const usedPositions = new Set();
+    container.querySelectorAll('.sea-floor-item').forEach(el => {
+        usedPositions.add(el.style.left + '|' + el.style.bottom);
+    });
+    const available = TREASURE_SPOTS.filter(p => !usedPositions.has(p.left + '|' + p.bottom));
+    if (available.length === 0) return;
+    const pos = available[Math.floor(Math.random() * available.length)];
+
+    const div = document.createElement('div');
+    div.className = 'sea-floor-item';
+    div.dataset.itemId = item.id;
+    div.dataset.itemName = item.name;
+    div.dataset.itemImg = item.img;
+    // Trident (treasure2, ts*_2 pattern) gets 3x size, others 2x
+    const isTrident = item.id.endsWith('_2') || item.id === 'treasure2';
+    const baseSz = 50 + Math.random() * 20; // 50-70px
+    const sz = isTrident ? baseSz * 1.5 : baseSz;
+    div.style.height = sz + 'px';
+    div.style.left = pos.left;
+    div.style.bottom = pos.bottom;
+    div.style.animationDelay = (Math.random() * 2) + 's';
+    div.style.opacity = '0';
+    div.style.transition = 'opacity 1s';
+    const img = document.createElement('img');
+    img.src = IMG + item.img; img.alt = item.name;
+    div.appendChild(img); container.appendChild(div);
+    requestAnimationFrame(() => { div.style.opacity = '1'; });
+}
+
+function refillTreasures() {
+    const fc = document.getElementById('seaFloorContainer');
+    if (!fc) return;
+    const current = fc.querySelectorAll('.sea-floor-item').length;
+    const needed = MAX_TREASURES_ON_SCREEN - current;
+    for (let i = 0; i < needed; i++) {
+        spawnTreasure(fc);
+    }
+}
+
+// Canvas-based caustic light rendering
+let causticAnimId = null;
+function initCaustics() {
+    if (causticAnimId) cancelAnimationFrame(causticAnimId);
+    const canvas = document.getElementById('seaCausticCanvas');
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+    let t = 0;
+    function drawCaustics() {
+        if (currentPage !== 'sea-game') { causticAnimId = null; return; }
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        t += 0.008;
+        ctx.globalCompositeOperation = 'lighter';
+        const cs = 120;
+        for (let x = -cs; x < canvas.width + cs; x += cs * 0.6) {
+            for (let y = -cs; y < canvas.height + cs; y += cs * 0.6) {
+                const ox = Math.sin(t + x * 0.005 + y * 0.003) * 40;
+                const oy = Math.cos(t * 0.8 + y * 0.004 + x * 0.002) * 30;
+                const br = (Math.sin(t * 1.2 + x * 0.008 + y * 0.006) + 1) * 0.5;
+                if (br > 0.55) {
+                    const a = (br - 0.55) * 0.35;
+                    const cx = x + ox, cy = y + oy, r = cs * 0.3 * (0.6 + br * 0.4);
+                    const g = ctx.createRadialGradient(cx, cy, 0, cx, cy, r);
+                    g.addColorStop(0, `rgba(200,240,255,${a})`);
+                    g.addColorStop(0.5, `rgba(180,220,255,${a * 0.4})`);
+                    g.addColorStop(1, 'transparent');
+                    ctx.fillStyle = g;
+                    ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2); ctx.fill();
+                }
+            }
+        }
+        causticAnimId = requestAnimationFrame(drawCaustics);
+    }
+    drawCaustics();
+}
+
+function setupSeaScene() {
+    seaAnimTimers.forEach(t => clearInterval(t));
+    seaAnimTimers = [];
+
+    // Bubbles
+    const bc = document.getElementById('bubblesContainer');
+    bc.innerHTML = '';
+    for (let i = 0; i < 15; i++) {
+        const b = document.createElement('div');
+        b.className = 'bubble';
+        const sz = 5 + Math.random() * 20;
+        b.style.width = sz + 'px'; b.style.height = sz + 'px';
+        b.style.left = Math.random() * 100 + '%';
+        b.style.bottom = (Math.random() * 30) + '%';
+        b.style.animationDuration = (4 + Math.random() * 6) + 's';
+        b.style.animationDelay = Math.random() * 5 + 's';
+        bc.appendChild(b);
+    }
+
+    // === Canvas Caustics ===
+    initCaustics();
+
+    // === Light Particles ===
+    const particleTimer = setInterval(() => {
+        if (currentPage !== 'sea-game') return;
+        const scene = document.getElementById('seaScene');
+        const p = document.createElement('div');
+        p.className = 'sea-light-particle';
+        const sz = 3 + Math.random() * 6;
+        p.style.width = sz + 'px'; p.style.height = sz + 'px';
+        p.style.left = Math.random() * 100 + '%';
+        p.style.bottom = Math.random() * 30 + '%';
+        p.style.setProperty('--pdx', (Math.random() * 60 - 30) + 'px');
+        const dur = 4 + Math.random() * 5;
+        p.style.animation = `seaParticleFloat ${dur}s ease-out forwards`;
+        scene.appendChild(p);
+        setTimeout(() => p.remove(), dur * 1000);
+    }, 400);
+    seaAnimTimers.push(particleTimer);
+
+    // === Swimming + floor creatures: pick 10-15 random from pool ===
+    const sc = document.getElementById('seaCreaturesContainer');
+    sc.innerHTML = '';
+    const swimPool = SEA_ANIMALS.filter(a => a.type === 'swim' || a.type === 'seahorse' || a.type === 'jellyfish');
+    const floorPool = SEA_ANIMALS.filter(a => a.type === 'floor');
+
+    // Always include mermaid + pick 2-3 other floor creatures (excluding magic animals)
+    const floorPicks = [SEA_ANIMALS.find(a => a.id === 'mermaid')];
+    const regularFloor = floorPool.filter(a => a.id !== 'mermaid' && !MAGIC_IDS.includes(a.id));
+    const otherFloor = shuffle([...regularFloor]);
+    floorPicks.push(...otherFloor.slice(0, 2)); // mermaid + 2 floor = 3 floor creatures
+
+    // Pick 8-12 swimmers randomly
+    // Total non-treasure animals ≤ 10: ~5-6 swimmers + 3-4 floor + 1 magic
+    const swimCount = 5 + Math.floor(Math.random() * 2);
+    const swimPicks = shuffle([...swimPool]).slice(0, swimCount);
+
+    // Spawn swimmers with staggered delays
+    swimPicks.forEach((item, i) => {
+        createSwimmer(item, sc, i * 1.5 + Math.random() * 3);
+    });
+
+    // Spawn floor creatures
+    floorPicks.forEach(item => { if (item) createFloorCreature(item, sc); });
+
+    // Respawn swimmers to keep 10-15 on screen
+    const respawnTimer = setInterval(() => {
+        if (currentPage !== 'sea-game') return;
+        // Count current swimmers
+        const currentSwimmers = sc.querySelectorAll('.sea-creature').length;
+        const totalAnimals = sc.querySelectorAll('.sea-creature, .sea-floor-creature').length;
+        if (totalAnimals < 10 && currentSwimmers < 7) {
+            const item = swimPool[Math.floor(Math.random() * swimPool.length)];
+            const { el, dur } = createSwimmer(item, sc, 0);
+            setTimeout(() => { if (el.parentNode) el.remove(); }, dur * 1000 + 1000);
+        }
+    }, 4000);
+    seaAnimTimers.push(respawnTimer);
+
+    // Respawn floor creatures (mermaid changes direction, exclude magic animals)
+    const floorTimer = setInterval(() => {
+        if (currentPage !== 'sea-game') return;
+        // Remove non-magic floor creatures only
+        sc.querySelectorAll('.sea-floor-creature:not([data-magic])').forEach(el => el.remove());
+        const newFloor = [SEA_ANIMALS.find(a => a.id === 'mermaid')];
+        const others = shuffle([...regularFloor]);
+        newFloor.push(...others.slice(0, 2 + Math.floor(Math.random() * 2)));
+        newFloor.forEach(item => { if (item) createFloorCreature(item, sc); });
+    }, 18000);
+    seaAnimTimers.push(floorTimer);
+
+    // Magic Animal: spawn 1 random magic animal after 20s delay, max 1 on screen
+    const magicPool = SEA_ANIMALS.filter(a => MAGIC_IDS.includes(a.id));
+    setTimeout(() => {
+        if (currentPage !== 'sea-game') return;
+        const ma = magicPool[Math.floor(Math.random() * magicPool.length)];
+        const maEl = createFloorCreature(ma, sc);
+        // Tag magic animals
+        const lastChild = sc.querySelector('.sea-floor-creature:last-child');
+        if (lastChild) lastChild.dataset.magic = '1';
+    }, 20000);
+    // Respawn magic animal: check every 10s, but only spawn if cooldown (30-60s) has passed
+    let nextMagicSpawnAt = Date.now() + 20000; // first one at 20s
+    const magicTimer = setInterval(() => {
+        if (currentPage !== 'sea-game') return;
+        const existing = sc.querySelector('.sea-floor-creature[data-magic]');
+        if (!existing && Date.now() >= nextMagicSpawnAt) {
+            const ma = magicPool[Math.floor(Math.random() * magicPool.length)];
+            createFloorCreature(ma, sc);
+            const lastChild = sc.querySelector('.sea-floor-creature:last-child');
+            if (lastChild) lastChild.dataset.magic = '1';
+            // Set next spawn cooldown: 30-60s from now
+            nextMagicSpawnAt = Date.now() + 30000 + Math.random() * 30000;
+        }
+    }, 10000);
+    seaAnimTimers.push(magicTimer);
+
+    // === Treasures: max 5 on screen, refill after collection ===
+    const fc = document.getElementById('seaFloorContainer');
+    fc.innerHTML = '';
+    // Spawn initial 5
+    for (let i = 0; i < MAX_TREASURES_ON_SCREEN; i++) {
+        spawnTreasure(fc);
+    }
+
+    // Periodically check and refill if treasures were collected
+    if (treasureRefillTimer) clearInterval(treasureRefillTimer);
+    treasureRefillTimer = setInterval(() => {
+        if (currentPage !== 'sea-game') return;
+        refillTreasures();
+    }, 5000);
+    seaAnimTimers.push(treasureRefillTimer);
+}
+
+// ===== QUESTION TIMER =====
+let questionTimerId = null;
+let questionTimeLeft = 0;
+
+function startQuestionTimer(seconds) {
+    clearQuestionTimer();
+    questionTimeLeft = seconds;
+    const timerEl = document.getElementById('seaQuestionTimer');
+    const textEl = document.getElementById('seaTimerText');
+    timerEl.style.display = 'flex';
+    timerEl.classList.remove('warning');
+    textEl.textContent = questionTimeLeft;
+
+    questionTimerId = setInterval(() => {
+        questionTimeLeft--;
+        textEl.textContent = questionTimeLeft;
+        if (questionTimeLeft <= 5) {
+            timerEl.classList.add('warning');
+        }
+        if (questionTimeLeft <= 0) {
+            clearQuestionTimer();
+            onQuestionTimeout();
+        }
+    }, 1000);
+}
+
+function clearQuestionTimer() {
+    if (questionTimerId) { clearInterval(questionTimerId); questionTimerId = null; }
+    const timerEl = document.getElementById('seaQuestionTimer');
+    if (timerEl) { timerEl.style.display = 'none'; timerEl.classList.remove('warning'); }
+}
+
+function onQuestionTimeout() {
+    seaWrong++;
+    document.getElementById('sea-wrong').textContent = seaWrong;
+    showFeedback('\u231b 时间到!');
+    // Show lost treasure AFTER the timeout feedback fades (1.5s)
+    setTimeout(() => loseTreasurePenalty(), 1500);
+    setTimeout(() => nextSeaQuestion(), 4000);
+}
+
+// ===== PICK MODE WITH 30s THAW TIMER =====
+let pickTimerId = null;
+let pickTimeLeft = 0;
+let thawBatches = []; // arrays of elements to thaw at each batch
+let thawIndex = 0;
+let hasCollected = false; // whether child already collected 1 item
+
+function checkSeaAnswer() {
+    if (seaPickMode) return;
+    const input = document.getElementById('sea-q-input');
+    const val = parseInt(input.value);
+    if (isNaN(val)) return;
+
+    clearQuestionTimer();
+
+    if (val === seaQuestion.answer) {
+        input.className = 'game-q-input correct';
+        seaCorrect++;
+        bumpDailySolved();
+        document.getElementById('sea-correct').textContent = seaCorrect;
+        showFeedback('\u2b50 正确!');
+        setTimeout(() => enablePickMode(), 800);
+    } else {
+        input.className = 'game-q-input wrong';
+        seaWrong++;
+        document.getElementById('sea-wrong').textContent = seaWrong;
+        showFeedback('\u274c ' + seaQuestion.text + ' = ' + seaQuestion.answer);
+        setTimeout(() => loseTreasurePenalty(), 1500);
+        setTimeout(() => nextSeaQuestion(), 4000);
+    }
+}
+
+function loseTreasurePenalty() {
+    if (treasureCollection.length > 0) {
+        const lostIndex = Math.floor(Math.random() * treasureCollection.length);
+        const lostItem = treasureCollection[lostIndex];
+        treasureCollection.splice(lostIndex, 1);
+        saveTreasures();
+        updateTreasureBoxUI();
+        showLostItemAnimation(lostItem);
+    }
+}
+
+function nextSeaQuestion() {
+    seaQuestion = generateSeaQuestion();
+    document.getElementById('sea-q-text').textContent = seaQuestion.text + ' = ';
+    const input = document.getElementById('sea-q-input');
+    input.value = ''; input.className = 'game-q-input'; input.focus();
+
+    // Set timer based on carry/borrow
+    const timeLimit = seaQuestion.hasCarry ? 60 : 30;
+    startQuestionTimer(timeLimit);
+}
+
+function enablePickMode() {
+    seaPickMode = true;
+    hasCollected = false;
+    pickTimeLeft = 30;
+
+    document.getElementById('seaPickHint').style.display = 'block';
+    const timerEl = document.getElementById('seaQuestionTimer');
+    const textEl = document.getElementById('seaTimerText');
+    timerEl.style.display = 'flex';
+    timerEl.classList.remove('warning');
+    textEl.textContent = pickTimeLeft;
+
+    // All items start frozen (collectible) - make them clickable
+    // But legendaries (mermaid + magic animals) are only collectible if cooldown has passed
+    const now = Date.now();
+    const legendaryAvailable = now >= legendaryCollectibleAt;
+    const scene = document.getElementById('seaScene');
+    const allItems = [...scene.querySelectorAll('.sea-creature, .sea-floor-creature, .sea-floor-item')];
+    allItems.forEach(el => {
+        const isLegendary = LEGENDARY_IDS.includes(el.dataset.itemId);
+        if (isLegendary && !legendaryAvailable) {
+            // Legendary on cooldown: visible but NOT collectible
+            return;
+        }
+        el.classList.add('sea-collectible');
+        el.classList.remove('sea-thawed');
+        el.style.cursor = 'pointer';
+        el.addEventListener('click', onPickItem, { once: true });
+    });
+
+    // Prepare thaw batches: after 5s, thaw in random batches every 5s
+    const shuffled = [...allItems].sort(() => Math.random() - 0.5);
+    thawBatches = [];
+    const batchCount = 5; // 5 batches over 25 seconds (5s to 30s)
+    const perBatch = Math.ceil(shuffled.length / batchCount);
+    for (let i = 0; i < batchCount; i++) {
+        thawBatches.push(shuffled.slice(i * perBatch, (i + 1) * perBatch));
+    }
+    thawIndex = 0;
+
+    // Start pick countdown
+    pickTimerId = setInterval(() => {
+        pickTimeLeft--;
+        textEl.textContent = pickTimeLeft;
+
+        if (pickTimeLeft <= 5) timerEl.classList.add('warning');
+
+        // Thaw a batch at 25s, 20s, 15s, 10s, 5s remaining (i.e. at 5s, 10s, 15s, 20s, 25s elapsed)
+        const elapsed = 30 - pickTimeLeft;
+        if (elapsed >= 5 && elapsed % 5 === 0 && thawIndex < thawBatches.length) {
+            const batch = thawBatches[thawIndex];
+            batch.forEach(el => {
+                el.classList.add('sea-thawed');
+                el.classList.remove('sea-collectible');
+                el.style.cursor = 'default';
+                el.removeEventListener('click', onPickItem);
+            });
+            thawIndex++;
+        }
+
+        if (pickTimeLeft <= 0) {
+            endPickMode();
+        }
+    }, 1000);
+}
+
+function endPickMode() {
+    if (pickTimerId) { clearInterval(pickTimerId); pickTimerId = null; }
+    seaPickMode = false;
+    document.getElementById('seaPickHint').style.display = 'none';
+
+    // Remove all collectible/thawed states
+    const scene = document.getElementById('seaScene');
+    scene.querySelectorAll('.sea-collectible, .sea-thawed').forEach(el => {
+        el.classList.remove('sea-collectible', 'sea-thawed');
+        el.style.cursor = 'default';
+        el.removeEventListener('click', onPickItem);
+    });
+
+    clearQuestionTimer();
+    setTimeout(() => nextSeaQuestion(), 500);
+}
+
+function disablePickMode() {
+    if (pickTimerId) { clearInterval(pickTimerId); pickTimerId = null; }
+    seaPickMode = false;
+    document.getElementById('seaPickHint').style.display = 'none';
+    const scene = document.getElementById('seaScene');
+    scene.querySelectorAll('.sea-collectible, .sea-thawed').forEach(el => {
+        el.classList.remove('sea-collectible', 'sea-thawed');
+        el.style.cursor = 'default';
+        el.removeEventListener('click', onPickItem);
+    });
+    clearQuestionTimer();
+}
+
+function onPickItem(e) {
+    if (hasCollected) return; // only 1 pick allowed
+    const el = e.currentTarget;
+    if (el.classList.contains('sea-thawed')) return; // already thawed
+    const itemId = el.dataset.itemId;
+    const itemName = el.dataset.itemName;
+    const itemImg = el.dataset.itemImg;
+    if (!itemId) return;
+
+    hasCollected = true;
+
+    // Fly-to-box animation
+    const rect = el.getBoundingClientRect();
+    const boxBtn = document.getElementById('treasureBoxBtn');
+    const boxRect = boxBtn.getBoundingClientRect();
+    const flyEl = document.createElement('div');
+    flyEl.className = 'fly-to-box';
+    flyEl.innerHTML = `<img src="${IMG}${itemImg}">`;
+    flyEl.style.left = rect.left + rect.width/2 - 30 + 'px';
+    flyEl.style.top = rect.top + rect.height/2 - 30 + 'px';
+    document.body.appendChild(flyEl);
+    requestAnimationFrame(() => {
+        flyEl.style.left = boxRect.left + boxRect.width/2 - 15 + 'px';
+        flyEl.style.top = boxRect.top + boxRect.height/2 - 15 + 'px';
+        flyEl.classList.add('flying');
+    });
+    setTimeout(() => {
+        flyEl.remove();
+        boxBtn.style.animation = 'shake 0.4s';
+        setTimeout(() => boxBtn.style.animation = '', 500);
+    }, 850);
+
+    el.style.transition = 'opacity 0.3s';
+    el.style.opacity = '0';
+    setTimeout(() => { if (el.parentNode) el.remove(); }, 400);
+
+    setTreasureCooldown(itemId);
+
+    // If a legendary was collected, set 30-60s cooldown before any legendary is collectible again
+    if (LEGENDARY_IDS.includes(itemId)) {
+        const cd = 30000 + Math.random() * 30000; // 30-60s
+        legendaryCollectibleAt = Date.now() + cd;
+    }
+
+    treasureCollection.push({ id: itemId, name: itemName, img: itemImg, time: Date.now() });
+    saveTreasures();
+    updateTreasureBoxUI();
+    showFeedback('\ud83c\udf81 ' + itemName + ' 收入囊中!');
+
+    // After collecting, end pick mode and go to next question
+    disablePickMode();
+    setTimeout(() => nextSeaQuestion(), 1000);
+}
+
+function showLostItemAnimation(item) {
+    const el = document.createElement('div');
+    el.className = 'lost-item-big';
+    el.innerHTML = `<img src="${IMG}${item.img}"><div class="lost-text">&#128546; 丢失了 ${item.name}!</div>`;
+    document.body.appendChild(el);
+    setTimeout(() => el.remove(), 2600);
+}
+
+// ===== PRICING SYSTEM =====
+// Price ranges: [min, max] - actual price depends on how many you own
+const PRICE_TABLE = {
+    // Mermaid - legendary
+    mermaid: [120, 180],
+    // Magic Animals - most valuable
+    ma1: [150, 220], ma2: [180, 260], ma3: [160, 240], ma4: [170, 250],
+    ma5: [150, 230], ma6: [150, 230], ma7: [180, 260], ma8: [170, 250],
+    // Whale
+    whale: [60, 100],
+    // Large sea animals
+    sa10: [30, 60], sa11: [40, 70], sa12: [30, 60], sa9: [20, 40], sa15: [20, 40], sa14: [20, 40], sa13: [20, 30],
+    // Small sea animals
+    sa2: [10, 20], sa3: [10, 20], sa7: [10, 20], seahorse1: [10, 20], seahorse2: [10, 20],
+    // Treasury Set 1
+    ts1_1: [60, 100], ts1_2: [40, 70], ts1_3: [30, 60], ts1_4: [30, 60], ts1_5: [40, 70],
+    ts1_6: [50, 90], ts1_7: [40, 80], ts1_8: [20, 50], ts1_9: [40, 70], ts1_10: [80, 130],
+    // Treasury Set 2
+    ts2_1: [70, 110], ts2_2: [40, 80], ts2_3: [30, 60], ts2_4: [40, 70], ts2_5: [40, 70],
+    ts2_6: [50, 90], ts2_7: [50, 80], ts2_8: [60, 100], ts2_9: [40, 70], ts2_10: [80, 130],
+    // Treasury Set 3
+    ts3_1: [70, 110], ts3_2: [40, 70], ts3_3: [30, 60], ts3_4: [30, 60], ts3_5: [40, 70],
+    ts3_6: [50, 90], ts3_7: [50, 80], ts3_8: [20, 50], ts3_9: [40, 70], ts3_10: [80, 130],
+};
+// Default for any new item not in the table
+const DEFAULT_PRICE = [20, 50];
+
+function getItemPrice(itemId) {
+    const range = PRICE_TABLE[itemId] || DEFAULT_PRICE;
+    const total = treasureCollection.length;
+    if (total === 0) return range[1]; // empty box = max price
+    const count = treasureCollection.filter(t => t.id === itemId).length;
+    const ratio = count / total; // 0 to 1
+    // Higher ratio = lower price; threshold at 30%
+    const t = Math.min(ratio / 0.3, 1);
+    return Math.round(range[1] - (range[1] - range[0]) * t);
+}
+
+// ===== FINANCIAL STATE (persisted) =====
+let cashBalance = parseFloat(localStorage.getItem('seaCash') || '0');
+let withdrawable = parseFloat(localStorage.getItem('seaWithdrawable') || '0');
+let investments = JSON.parse(localStorage.getItem('seaInvestments') || '[]');
+let investHistory = JSON.parse(localStorage.getItem('seaInvestHistory') || '[]');
+
+function saveFinance() {
+    localStorage.setItem('seaCash', cashBalance);
+    localStorage.setItem('seaWithdrawable', withdrawable);
+    localStorage.setItem('seaInvestments', JSON.stringify(investments));
+    localStorage.setItem('seaInvestHistory', JSON.stringify(investHistory));
+    scheduleCloudPush();
+}
+
+// ===== DAILY SETTLEMENT STATE (本地时间) =====
+const DAILY_GOAL = 30;        // 每日答对题数目标
+const TREASURE_LOSS_RATE = 0.10; // 未达标随机丢宝物比例
+const CASH_DEFLATION = 0.10;     // 可投资金额每日通缩比例
+
+let dailySolved = parseInt(localStorage.getItem('seaDailySolved') || '0');
+let lastSettleDate = localStorage.getItem('seaLastSettleDate') || '';
+let settleHistory = JSON.parse(localStorage.getItem('seaSettleHistory') || '[]');
+
+function saveDaily() {
+    localStorage.setItem('seaDailySolved', dailySolved);
+    localStorage.setItem('seaLastSettleDate', lastSettleDate);
+    localStorage.setItem('seaSettleHistory', JSON.stringify(settleHistory));
+    scheduleCloudPush();
+}
+
+// 跟随系统本地时间,按本地日历日(00:00-23:59:59)划分"一天"
+function getLocalDateStr(d) {
+    d = d || new Date();
+    return d.getFullYear() + '-' +
+        String(d.getMonth() + 1).padStart(2, '0') + '-' +
+        String(d.getDate()).padStart(2, '0');
+}
+
+function localDateDiffDays(fromStr, toStr) {
+    // 'YYYY-MM-DDT00:00:00'(无时区后缀)按本地时间解析
+    const a = new Date(fromStr + 'T00:00:00').getTime();
+    const b = new Date(toStr + 'T00:00:00').getTime();
+    return Math.round((b - a) / 86400000);
+}
+
+// 增加今日答对计数(仅闯关模式调用)
+function bumpDailySolved() {
+    const today = getLocalDateStr();
+    // 如果跨日了,先结算(理论上 page load 已结算,但防御性处理)
+    if (lastSettleDate && lastSettleDate !== today) {
+        runDailySettlement(/*silent=*/true);
+    }
+    dailySolved++;
+    saveDaily();
+}
+
+// 核心结算函数:从 lastSettleDate 一直补扣到"昨天"
+function runDailySettlement(silent) {
+    const today = getLocalDateStr();
+    if (!lastSettleDate) {
+        // 首次进入:仅记录今天为起点,不结算
+        lastSettleDate = today;
+        saveDaily();
+        return null;
+    }
+    if (lastSettleDate === today) return null; // 今天已经结算过
+
+    let totalLost = []; // 累计丢失的宝物列表
+    let cashBefore = cashBalance;
+
+    // 按本地日 loop,从 lastSettleDate 下一天开始,直到 today(不含 today)
+    let cursor = lastSettleDate;
+    const daysToSettle = localDateDiffDays(lastSettleDate, today);
+    for (let i = 0; i < daysToSettle; i++) {
+        // 计算 cursor 当天的状况
+        // 只有 cursor === lastSettleDate 这一天用真实 dailySolved,
+        // 之后的"空过日"答对数都是 0
+        const solvedThatDay = (i === 0) ? dailySolved : 0;
+        const lostThisDay = [];
+
+        // 规则 1: 答对 < 30 → 随机丢 floor(总数 * 10%)
+        if (solvedThatDay < DAILY_GOAL && treasureCollection.length > 0) {
+            const lossCount = Math.floor(treasureCollection.length * TREASURE_LOSS_RATE);
+            for (let k = 0; k < lossCount && treasureCollection.length > 0; k++) {
+                const idx = Math.floor(Math.random() * treasureCollection.length);
+                lostThisDay.push(treasureCollection[idx]);
+                treasureCollection.splice(idx, 1);
+            }
+        }
+
+        // 规则 2: 可投资金额无条件 -10% (向下取整)
+        const cashBeforeDay = cashBalance;
+        cashBalance = Math.floor(cashBalance * (1 - CASH_DEFLATION));
+
+        // cursor 当天对应的"日期" = lastSettleDate + i 天
+        const dayDate = new Date(lastSettleDate + 'T00:00:00');
+        dayDate.setDate(dayDate.getDate() + i);
+        const dayStr = getLocalDateStr(dayDate);
+
+        settleHistory.push({
+            date: dayStr,
+            solved: solvedThatDay,
+            lostTreasures: lostThisDay.map(t => ({ id: t.id, name: t.name, img: t.img })),
+            cashBefore: cashBeforeDay,
+            cashAfter: cashBalance,
+        });
+        totalLost = totalLost.concat(lostThisDay);
+    }
+
+    // 限制历史长度,避免无限增长
+    if (settleHistory.length > 365) settleHistory = settleHistory.slice(-365);
+
+    // 进入今天,重置今日答对数
+    dailySolved = 0;
+    lastSettleDate = today;
+    saveDaily();
+    saveTreasures();
+    saveFinance();
+    updateTreasureBoxUI();
+
+    const result = {
+        lost: totalLost,
+        cashBefore: cashBefore,
+        cashAfter: cashBalance,
+        cashLoss: cashBefore - cashBalance,
+        daysSettled: daysToSettle,
+    };
+    if (!silent && (totalLost.length > 0 || result.cashLoss > 0)) {
+        showSettlementModal(result);
+    }
+    return result;
+}
+
+// ===== STOCKS =====
+const STOCKS = [
+    { symbol: 'TSLA', name: 'Tesla', emoji: '&#128664;' },
+    { symbol: 'INTC', name: 'Intel', emoji: '&#128187;' },
+    { symbol: 'NVDA', name: 'NVIDIA', emoji: '&#127918;' },
+    { symbol: 'AAPL', name: 'Apple', emoji: '&#127822;' },
+    { symbol: 'QQQ',  name: 'QQQ ETF', emoji: '&#128200;' },
+];
+let stockPrices = {}; // { TSLA: 180.5, ... }
+let stockPricesLoading = false;
+
+// Latest verified prices (2026-05-30) as fallback
+// Alpha Vantage API (unlimited key, CORS-enabled)
+const AV_KEY = 'HQZ8R27E4WIZV9TI';
+const FALLBACK_PRICES = { TSLA: 435.79, INTC: 114.68, NVDA: 211.14, AAPL: 312.06, QQQ: 738.31 };
+let stockStatus = {}; // per-symbol: 'ok' | 'loading' | 'failed'
+
+// Fetch latest trade price via intraday 1min, fallback to GLOBAL_QUOTE
+async function fetchOneStock(symbol) {
+    try {
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 15000);
+        // Try intraday first for latest trade price
+        const res = await fetch(
+            `https://www.alphavantage.co/query?function=TIME_SERIES_INTRADAY&symbol=${symbol}&interval=1min&outputsize=compact&apikey=${AV_KEY}`,
+            { signal: controller.signal }
+        );
+        clearTimeout(timeout);
+        if (res.ok) {
+            const data = await res.json();
+            const ts = data['Time Series (1min)'];
+            if (ts) {
+                const latestKey = Object.keys(ts).sort().pop();
+                if (latestKey) {
+                    stockPrices[symbol] = Math.round(parseFloat(ts[latestKey]['4. close']) * 100) / 100;
+                    stockStatus[symbol] = 'ok';
+                    return true;
+                }
+            }
+            // Fallback: try GLOBAL_QUOTE in same response cycle
+            const controller2 = new AbortController();
+            const timeout2 = setTimeout(() => controller2.abort(), 15000);
+            const res2 = await fetch(
+                `https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=${symbol}&apikey=${AV_KEY}`,
+                { signal: controller2.signal }
+            );
+            clearTimeout(timeout2);
+            if (res2.ok) {
+                const data2 = await res2.json();
+                const quote = data2['Global Quote'];
+                if (quote && quote['05. price']) {
+                    stockPrices[symbol] = Math.round(parseFloat(quote['05. price']) * 100) / 100;
+                    stockStatus[symbol] = 'ok';
+                    return true;
+                }
+            }
+        }
+    } catch(e) {}
+    return false;
+}
+
+// Fetch all stock prices with auto-retry for failures
+async function fetchStockPrices() {
+    if (stockPricesLoading) return;
+    stockPricesLoading = true;
+
+    // Mark all as loading
+    STOCKS.forEach(s => { stockStatus[s.symbol] = 'loading'; });
+    renderStockPriceStatus();
+
+    // First pass: fetch all
+    const failed = [];
+    for (const stock of STOCKS) {
+        const ok = await fetchOneStock(stock.symbol);
+        if (ok) {
+            renderStockPriceStatus(); // update UI immediately for this stock
+        } else {
+            failed.push(stock.symbol);
+        }
+        await new Promise(r => setTimeout(r, 200));
+    }
+
+    // Auto-retry failed ones (up to 2 retries, with backoff)
+    if (failed.length > 0) {
+        for (let retry = 0; retry < 2; retry++) {
+            await new Promise(r => setTimeout(r, 2000)); // wait 2s before retry
+            const stillFailed = [];
+            for (const sym of failed) {
+                if (stockStatus[sym] === 'ok') continue;
+                const ok = await fetchOneStock(sym);
+                if (ok) {
+                    renderStockPriceStatus();
+                } else {
+                    stillFailed.push(sym);
+                }
+                await new Promise(r => setTimeout(r, 300));
+            }
+            failed.length = 0;
+            failed.push(...stillFailed);
+            if (failed.length === 0) break;
+        }
+    }
+
+    // After retries, mark remaining as failed
+    failed.forEach(sym => { stockStatus[sym] = 'failed'; });
+
+    // Fill any never-fetched with fallback (for first load)
+    STOCKS.forEach(s => {
+        if (!stockPrices[s.symbol]) stockPrices[s.symbol] = FALLBACK_PRICES[s.symbol] || 100;
+    });
+
+    stockPricesLoading = false;
+    localStorage.setItem('seaStockPrices', JSON.stringify(stockPrices));
+    localStorage.setItem('seaStockPricesTime', Date.now());
+    renderStockPriceStatus();
+    updateCashDisplay();
+}
+
+// Update just the price display cells without re-rendering the whole tab
+function renderStockPriceStatus() {
+    STOCKS.forEach(s => {
+        const priceEl = document.getElementById('stockPriceVal_' + s.symbol);
+        if (!priceEl) return;
+        const status = stockStatus[s.symbol];
+        if (status === 'loading') {
+            priceEl.innerHTML = '<span style="color:rgba(255,255,255,0.5)">&#8987; 刷新中...</span>';
+            priceEl.style.animation = 'twinkle 1s ease-in-out infinite';
+        } else if (status === 'failed') {
+            priceEl.innerHTML = `<span style="color:#ff6b6b">&#9888; 刷新失败</span> <span style="color:rgba(255,255,255,0.4);font-size:0.75rem">($${stockPrices[s.symbol] || '?'})</span>`;
+            priceEl.style.animation = '';
+        } else {
+            priceEl.innerHTML = `$${stockPrices[s.symbol]}`;
+            priceEl.style.color = '#4CAF50';
+            priceEl.style.animation = '';
+        }
+    });
+    // Update time
+    const timeEl = document.getElementById('stockUpdateTime');
+    if (timeEl) {
+        const lastTime = parseInt(localStorage.getItem('seaStockPricesTime') || '0');
+        timeEl.textContent = lastTime ? '更新: ' + new Date(lastTime).toLocaleTimeString() : '';
+    }
+}
+
+// Load cached prices on startup
+try {
+    const cached = JSON.parse(localStorage.getItem('seaStockPrices') || '{}');
+    if (Object.keys(cached).length > 0) stockPrices = cached;
+} catch(e) {}
+STOCKS.forEach(s => {
+    if (!stockPrices[s.symbol]) stockPrices[s.symbol] = FALLBACK_PRICES[s.symbol] || 100;
+    stockStatus[s.symbol] = 'ok';
+});
+
+// ===== PERSISTENCE =====
+function saveTreasures() {
+    localStorage.setItem('seaTreasures', JSON.stringify(treasureCollection));
+    scheduleCloudPush();
+}
+function saveAll() {
+    saveTreasures();
+    saveFinance();
+}
+
+function updateTreasureBoxUI() {
+    const count = treasureCollection.length;
+    const countEl = document.getElementById('treasureBoxCount');
+    const imgEl = document.getElementById('treasureBoxImg');
+    if (countEl) countEl.textContent = count;
+    if (imgEl) imgEl.src = count > 0 ? IMG + 'treasure box full.png' : IMG + 'treasury bod empty.png';
+}
+
+function updateCashDisplay() {
+    const cd = document.getElementById('cashDisplay');
+    const wd = document.getElementById('withdrawableDisplay');
+    if (cd) cd.textContent = Math.floor(cashBalance);
+    if (wd) wd.textContent = Math.floor(withdrawable);
+}
+
+// ===== TABS =====
+function switchTab(tab) {
+    const ti = document.getElementById('tabItems');
+    const tv = document.getElementById('tabInvest');
+    const ci = document.getElementById('itemsTabContent');
+    const cv = document.getElementById('investTabContent');
+    if (tab === 'items') {
+        ti.style.background = 'rgba(255,215,0,0.2)'; ti.style.color = '#FFD700';
+        tv.style.background = 'rgba(255,255,255,0.05)'; tv.style.color = 'rgba(255,255,255,0.5)';
+        ci.style.display = ''; cv.style.display = 'none';
+        renderTreasureGrid();
+    } else {
+        tv.style.background = 'rgba(255,215,0,0.2)'; tv.style.color = '#FFD700';
+        ti.style.background = 'rgba(255,255,255,0.05)'; ti.style.color = 'rgba(255,255,255,0.5)';
+        ci.style.display = 'none'; cv.style.display = '';
+        renderInvestTab();
+    }
+}
+
+// ===== TREASURE GRID (with prices & sell) =====
+// Fixed slot order for each category - items always appear in the same position
+const SLOT_ORDER_MAGIC = ['mermaid','ma1','ma2','ma3','ma4','ma5','ma6','ma7','ma8'];
+const SLOT_ORDER_TREASURE = [
+    'ts1_1','ts1_2','ts1_3','ts1_4','ts1_5','ts1_6','ts1_7','ts1_8','ts1_9','ts1_10',
+    'ts2_1','ts2_2','ts2_3','ts2_4','ts2_5','ts2_6','ts2_7','ts2_8','ts2_9','ts2_10',
+    'ts3_1','ts3_2','ts3_3','ts3_4','ts3_5','ts3_6','ts3_7','ts3_8','ts3_9','ts3_10',
+];
+const SLOT_ORDER_ANIMAL = [
+    'sa2','sa3','sa7','sa9','sa10','sa11','sa12','sa13','sa14','sa15',
+    'whale','seahorse1','seahorse2',
+];
+
+function renderTreasureGrid() {
+    const container = document.getElementById('treasureGridContainer');
+    const subtitle = document.getElementById('treasureModalSubtitle');
+    container.innerHTML = '';
+
+    if (treasureCollection.length === 0) {
+        subtitle.textContent = '你还没有收集任何宝藏哦';
+        container.innerHTML = '<div class="treasure-empty">快去答题赢取宝藏吧! &#127754;</div>';
+        return;
+    }
+
+    // Group by id
+    const grouped = {};
+    treasureCollection.forEach(item => {
+        if (!grouped[item.id]) grouped[item.id] = { ...item, count: 0 };
+        grouped[item.id].count++;
+    });
+    subtitle.textContent = `共 ${treasureCollection.length} 件宝藏 | 可投资: $${Math.floor(cashBalance)}`;
+
+    function renderSection(title, emoji, slotOrder, colorAccent) {
+        const items = slotOrder.filter(id => grouped[id]);
+        if (items.length === 0) return;
+
+        const section = document.createElement('div');
+        section.style.marginBottom = '16px';
+        const header = document.createElement('div');
+        header.style.cssText = `color:${colorAccent};font-weight:700;font-size:0.9rem;margin-bottom:8px;padding-left:4px;`;
+        header.textContent = emoji + ' ' + title + ` (${items.reduce((s, id) => s + grouped[id].count, 0)})`;
+        section.appendChild(header);
+
+        const grid = document.createElement('div');
+        grid.className = 'treasure-grid';
+        // Render in fixed slot order
+        slotOrder.forEach(id => {
+            const item = grouped[id];
+            if (!item) return;
+            const price = getItemPrice(item.id);
+            const cell = document.createElement('div');
+            cell.className = 'treasure-grid-item';
+            cell.innerHTML = `
+                <img src="${IMG}${item.img}" alt="${item.name}">
+                <div class="item-label">${item.name}</div>
+                <div class="item-count">x${item.count}</div>
+                <div class="item-price">$${price}</div>
+                <button class="sell-btn" onclick="sellItem('${item.id}', ${price})">卖出 1 个</button>
+            `;
+            grid.appendChild(cell);
+        });
+        section.appendChild(grid);
+        container.appendChild(section);
+    }
+
+    renderSection('Magic Animal', '\u2728', SLOT_ORDER_MAGIC, '#E040FB');
+    renderSection('宝藏', '\u{1F48E}', SLOT_ORDER_TREASURE, '#FFD700');
+    renderSection('海洋动物', '\u{1F41F}', SLOT_ORDER_ANIMAL, '#4FC3F7');
+}
+
+function sellItem(itemId, price) {
+    const idx = treasureCollection.findIndex(t => t.id === itemId);
+    if (idx === -1) return;
+    treasureCollection.splice(idx, 1);
+    cashBalance += price;
+    saveAll();
+    updateTreasureBoxUI();
+    updateCashDisplay();
+    renderTreasureGrid();
+    showFeedback('$' + price + ' 到账!');
+}
+
+// ===== INVEST TAB =====
+const SAVINGS_RATE = 0.05; // 5% annual, daily compounding
+const DAILY_RATE = SAVINGS_RATE / 365;
+
+// Daily compound interest: principal * (1 + r/365)^days - principal
+function calcCompoundInterest(principal, days) {
+    return principal * Math.pow(1 + DAILY_RATE, days) - principal;
+}
+// Current MtM value of a savings position (principal + accrued compound interest)
+function savingsMtM(s) {
+    const days = Math.max(0, (Date.now() - s.buyTime) / 86400000);
+    return s.amount + calcCompoundInterest(s.amount, days);
+}
+// Stock MtM
+function stockMtM(h) {
+    const currentPrice = stockPrices[h.symbol] || h.buyPrice;
+    const shares = h.amount / h.buyPrice;
+    return shares * currentPrice;
+}
+
+// Compute all summary values
+function computeFinancials() {
+    let unrealizedSavings = 0, unrealizedStocks = 0, totalInvestMtM = 0;
+    const openSavings = investments.filter(i => i.type === 'savings' && !i.soldAt);
+    const openStocks = investments.filter(i => i.type === 'stock' && !i.soldAt);
+
+    openSavings.forEach(s => {
+        const mtm = savingsMtM(s);
+        totalInvestMtM += mtm;
+        unrealizedSavings += mtm - s.amount; // accrued compound interest
+    });
+    openStocks.forEach(h => {
+        const mtm = stockMtM(h);
+        totalInvestMtM += mtm;
+        unrealizedStocks += mtm - h.amount; // MtM - cost
+    });
+
+    // Total P&L = unrealized (open positions) + realized (withdrawable)
+    const totalPnl = unrealizedSavings + unrealizedStocks + withdrawable;
+    // Total value = investable + open positions MtM + withdrawable
+    const totalValue = cashBalance + totalInvestMtM + withdrawable;
+    return { totalValue, totalPnl, unrealizedSavings, unrealizedStocks };
+}
+
+function updateCashDisplay() {
+    const f = computeFinancials();
+    const tvEl = document.getElementById('totalValueDisplay');
+    const tpEl = document.getElementById('totalPnlDisplay');
+    const cd = document.getElementById('cashDisplay');
+    const wd = document.getElementById('withdrawableDisplay');
+    if (tvEl) tvEl.textContent = Math.floor(f.totalValue);
+    if (tpEl) {
+        const pnl = Math.floor(f.totalPnl);
+        const sign = pnl >= 0 ? '+' : '';
+        tpEl.textContent = '\ud83d\udcc8 总P&L: ' + sign + '$' + pnl;
+        tpEl.style.color = pnl >= 0 ? '#4CAF50' : '#ff6b6b';
+    }
+    if (cd) cd.textContent = Math.floor(cashBalance);
+    if (wd) wd.textContent = Math.floor(withdrawable);
+}
+
+function renderInvestTab() {
+    const container = document.getElementById('investContent');
+    container.innerHTML = '';
+
+    // Savings section
+    let html = '<div style="margin-bottom:18px"><div style="color:#FFD700;font-weight:700;margin-bottom:8px">&#127970; 存款 (每日复利)</div>';
+    html += `<div class="stock-card" style="flex-wrap:wrap">
+        <div class="stock-name">&#128176; 活期存款</div>
+        <div style="color:rgba(255,255,255,0.7);font-size:0.8rem">年利率 ${SAVINGS_RATE*100}% 日复利</div>
+        <input type="number" class="stock-input" id="savingsInput" min="1" step="1" placeholder="金额" oninput="updateSavingsPreview()">
+        <button class="stock-buy-btn" onclick="depositSavings()">存入</button>
+        <div id="savingsPreview" style="width:100%;color:#4CAF50;font-size:0.78rem;margin-top:6px;min-height:18px"></div>
+    </div>`;
+    const openSavings = investments.filter(i => i.type === 'savings' && !i.soldAt);
+    if (openSavings.length > 0) {
+        openSavings.forEach((s, i) => {
+            const days = Math.max(0, Math.floor((Date.now() - s.buyTime) / 86400000));
+            const interest = Math.floor(calcCompoundInterest(s.amount, days));
+            const mtm = s.amount + interest;
+            html += `<div class="holding-row">
+                <span>$${s.amount} 存入 ${new Date(s.buyTime).toLocaleDateString()}</span>
+                <span class="pnl-pos">市值 $${mtm} (+$${interest}, ${days}天)</span>
+                <input type="number" class="stock-input" id="partialW_${i}" min="1" max="${s.amount}" step="1" placeholder="取出额" style="width:65px;font-size:0.75rem">
+                <button class="sell-btn" onclick="withdrawSavings(${i})">取出</button>
+            </div>`;
+        });
+    }
+    html += '</div>';
+
+    // Stocks section
+    html += `<div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
+        <span style="color:#FFD700;font-weight:700">&#128200; 股票投资</span>
+        <button onclick="refreshStockPrices()" style="padding:4px 12px;border:none;border-radius:8px;background:rgba(255,255,255,0.15);color:#FFD700;font-family:'Nunito',sans-serif;font-size:0.75rem;font-weight:700;cursor:pointer">&#128260; 刷新股价</button>
+        <span id="stockUpdateTime" style="color:rgba(255,255,255,0.4);font-size:0.7rem"></span>
+    </div>`;
+    STOCKS.forEach(stock => {
+        html += `<div class="stock-card">
+            <div class="stock-name">${stock.emoji} ${stock.symbol}</div>
+            <div class="stock-price" id="stockPriceVal_${stock.symbol}">$${stockPrices[stock.symbol] || '---'}</div>
+            <input type="number" class="stock-input" id="buy_${stock.symbol}" min="1" step="1" placeholder="$">
+            <button class="stock-buy-btn" onclick="buyStock('${stock.symbol}')">买入</button>
+        </div>`;
+        const holdings = investments.filter(i => i.type === 'stock' && i.symbol === stock.symbol && !i.soldAt);
+        holdings.forEach((h, i) => {
+            const mtm = Math.round(stockMtM(h) * 100) / 100;
+            const pnl = Math.round((mtm - h.amount) * 100) / 100;
+            const pnlClass = pnl >= 0 ? 'pnl-pos' : 'pnl-neg';
+            const pnlSign = pnl >= 0 ? '+' : '';
+            html += `<div class="holding-row">
+                <span>$${h.amount} @ $${h.buyPrice} → 市值 $${mtm}</span>
+                <span class="${pnlClass}">${pnlSign}$${pnl}</span>
+                <button class="sell-btn" onclick="sellStock('${stock.symbol}', ${i})">卖出</button>
+            </div>`;
+        });
+    });
+    // Show last update time
+    setTimeout(() => renderStockPriceStatus(), 0);
+
+    // History
+    if (investHistory.length > 0) {
+        html += '<div style="color:#FFD700;font-weight:700;margin:15px 0 8px">&#128203; 投资明细</div>';
+        html += '<div style="max-height:150px;overflow-y:auto">';
+        [...investHistory].reverse().slice(0, 20).forEach(h => {
+            const pnl = h.pnl || 0;
+            const pnlClass = pnl >= 0 ? 'pnl-pos' : 'pnl-neg';
+            const pnlSign = pnl >= 0 ? '+' : '';
+            html += `<div class="holding-row" style="font-size:0.75rem">
+                <span>${h.symbol || '存款'} $${h.amount}${h.sellAmount ? ' → $'+h.sellAmount : ''}</span>
+                <span>${new Date(h.buyTime).toLocaleDateString()} → ${h.soldAt ? new Date(h.soldAt).toLocaleDateString() : '-'}</span>
+                <span class="${pnlClass}">P&L: ${pnlSign}$${pnl}</span>
+            </div>`;
+        });
+        html += '</div>';
+    }
+
+    container.innerHTML = html;
+    updateCashDisplay();
+}
+
+function updateSavingsPreview() {
+    const input = document.getElementById('savingsInput');
+    const preview = document.getElementById('savingsPreview');
+    if (!preview) return;
+    const amount = parseFloat(input.value);
+    if (!amount || amount <= 0) { preview.textContent = ''; return; }
+    // Daily compound preview
+    const weekly = Math.round(calcCompoundInterest(amount, 7) * 100) / 100;
+    const monthly = Math.round(calcCompoundInterest(amount, 30) * 100) / 100;
+    const yearly = Math.round(calcCompoundInterest(amount, 365) * 100) / 100;
+    preview.innerHTML = `&#128200; 每周赚 $${weekly} | 每月 $${monthly} | 每年 $${yearly}`;
+}
+
+async function refreshStockPrices() {
+    if (stockPricesLoading) { showFeedback('正在刷新中...'); return; }
+    await fetchStockPrices();
+    renderInvestTab();
+    const failedCount = STOCKS.filter(s => stockStatus[s.symbol] === 'failed').length;
+    if (failedCount === 0) {
+        showFeedback('全部股价已更新!');
+    } else {
+        showFeedback(failedCount + ' 只股票刷新失败');
+    }
+}
+
+function depositSavings() {
+    const input = document.getElementById('savingsInput');
+    const amount = Math.floor(parseFloat(input.value));
+    if (!amount || amount <= 0 || amount > cashBalance) { showFeedback('余额不足!'); return; }
+    cashBalance -= amount;
+    investments.push({ type: 'savings', amount, buyTime: Date.now() });
+    saveAll(); updateCashDisplay(); renderInvestTab();
+    showFeedback('存入 $' + amount);
+}
+
+// Partial or full withdrawal from savings
+// Proportional: if withdrawing W from principal P, realized interest = totalInterest * (W/P)
+function withdrawSavings(holdingIndex) {
+    const openSavings = investments.filter(i => i.type === 'savings' && !i.soldAt);
+    const s = openSavings[holdingIndex];
+    if (!s) return;
+
+    const partialInput = document.getElementById('partialW_' + holdingIndex);
+    let withdrawPrincipal = partialInput ? Math.floor(parseFloat(partialInput.value)) : 0;
+
+    // If no partial amount or invalid, withdraw all
+    if (!withdrawPrincipal || withdrawPrincipal <= 0 || withdrawPrincipal > s.amount) {
+        withdrawPrincipal = s.amount;
+    }
+
+    const days = Math.max(0, (Date.now() - s.buyTime) / 86400000);
+    const totalInterest = calcCompoundInterest(s.amount, days);
+    const proportion = withdrawPrincipal / s.amount;
+    const realizedInterest = Math.floor(totalInterest * proportion);
+    const payout = withdrawPrincipal + realizedInterest;
+
+    if (withdrawPrincipal === s.amount) {
+        // Full withdrawal - close position
+        s.soldAt = Date.now();
+        s.sellAmount = payout;
+        s.pnl = realizedInterest;
+        investHistory.push({ ...s, symbol: '存款' });
+    } else {
+        // Partial withdrawal - reduce principal, log the partial
+        s.amount -= withdrawPrincipal;
+        investHistory.push({
+            type: 'savings', symbol: '存款(部分取出)',
+            amount: withdrawPrincipal, buyTime: s.buyTime,
+            soldAt: Date.now(), sellAmount: payout, pnl: realizedInterest
+        });
+    }
+
+    // Principal → back to investable, interest → withdrawable
+    cashBalance += withdrawPrincipal;
+    withdrawable += realizedInterest;
+    saveAll(); updateCashDisplay(); renderInvestTab();
+    showFeedback('取出 本金$' + withdrawPrincipal + ' + 利息$' + realizedInterest);
+}
+
+async function buyStock(symbol) {
+    const input = document.getElementById('buy_' + symbol);
+    const amount = Math.floor(parseFloat(input.value));
+    if (!amount || amount <= 0 || amount > cashBalance) { showFeedback('余额不足!'); return; }
+    await fetchStockPrices();
+    const price = stockPrices[symbol];
+    if (!price) { showFeedback('无法获取股价'); return; }
+    cashBalance -= amount;
+    investments.push({ type: 'stock', symbol, amount, buyPrice: price, buyTime: Date.now() });
+    saveAll(); updateCashDisplay(); renderInvestTab();
+    showFeedback('买入 ' + symbol + ' $' + amount + ' @ $' + price);
+}
+
+async function sellStock(symbol, holdingIndex) {
+    await fetchStockPrices();
+    const holdings = investments.filter(i => i.type === 'stock' && i.symbol === symbol && !i.soldAt);
+    const h = holdings[holdingIndex];
+    if (!h) return;
+    const currentPrice = stockPrices[symbol] || h.buyPrice;
+    const shares = h.amount / h.buyPrice;
+    const sellAmount = Math.round(shares * currentPrice);
+    const pnl = sellAmount - h.amount;
+    h.soldAt = Date.now(); h.sellPrice = currentPrice; h.sellAmount = sellAmount; h.pnl = pnl;
+    // Full proceeds → investable amount
+    cashBalance += sellAmount;
+    // Only profit goes to withdrawable (loss already reflected in smaller sellAmount)
+    if (pnl > 0) withdrawable += pnl;
+    investHistory.push({ ...h });
+    saveAll(); updateCashDisplay(); renderInvestTab();
+    const sign = pnl >= 0 ? '+' : '';
+    showFeedback(symbol + ' 卖出 $' + sellAmount + ' (P&L: ' + sign + '$' + pnl + ')');
+}
+
+function showWithdraw() {
+    document.getElementById('withdrawMax').textContent = Math.floor(withdrawable);
+    document.getElementById('withdrawInput').value = '';
+    document.getElementById('withdrawDialog').classList.add('show');
+}
+
+function confirmWithdraw() {
+    const amount = Math.floor(parseFloat(document.getElementById('withdrawInput').value));
+    if (!amount || amount <= 0 || amount > withdrawable) { showFeedback('金额无效!'); return; }
+    withdrawable -= amount;
+    saveAll(); updateCashDisplay();
+    document.getElementById('withdrawDialog').classList.remove('show');
+    showFeedback('提现 $' + amount + ' 成功!');
+}
+
+// ===== DAILY SETTLEMENT MODAL =====
+function showSettlementModal(result) {
+    const body = document.getElementById('settleModalBody');
+    let html = '';
+    if (result.daysSettled > 1) {
+        html += '<div style="color:#FFD700;margin-bottom:10px">检测到上次结算距今 ' + result.daysSettled + ' 天,以下为累计扣减:</div>';
+    }
+    if (result.lost.length > 0) {
+        html += '<div style="color:#ff6b6b;font-weight:700;margin-bottom:8px">&#128302; 因未达每日 ' + DAILY_GOAL + ' 题目标,丢失了 ' + result.lost.length + ' 件宝物:</div>';
+        html += '<div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px">';
+        result.lost.forEach(t => {
+            const imgSrc = t.img ? (IMG + t.img) : '';
+            html += '<div style="text-align:center;background:rgba(255,107,107,0.15);border-radius:10px;padding:6px;width:80px">';
+            if (imgSrc) html += '<img src="' + imgSrc + '" style="width:50px;height:50px;object-fit:contain;opacity:0.7"><br>';
+            html += '<span style="font-size:0.8rem;color:#ffcccc">' + (t.name || t.id) + '</span></div>';
+        });
+        html += '</div>';
+    }
+    if (result.cashLoss > 0) {
+        html += '<div style="color:#ffa500;font-weight:700;margin-bottom:6px">&#128201; 你的可投资金额减少了 $' + result.cashLoss + '</div>';
+        html += '<div style="color:rgba(255,255,255,0.6);font-size:0.85rem">($' + result.cashBefore + ' &rarr; $' + result.cashAfter + ',每日 0 点通缩 ' + Math.round(CASH_DEFLATION * 100) + '%)</div>';
+    }
+    if (!html) return;
+    body.innerHTML = html;
+    document.getElementById('settleModal').classList.add('show');
+}
+
+// ===== EXPORT / IMPORT ALL DATA =====
+// 统一的存档序列化 (导出 + 云同步共用)
+function buildSaveObject() {
+    return {
+        version: 2,
+        exportTime: new Date().toISOString(),
+        treasures: treasureCollection,
+        cash: cashBalance,
+        withdrawable: withdrawable,
+        investments: investments,
+        investHistory: investHistory,
+        stockPrices: stockPrices,
+        dailySolved: dailySolved,
+        lastSettleDate: lastSettleDate,
+        settleHistory: settleHistory,
+    };
+}
+function applySaveObject(data) {
+    if (data.treasures) { treasureCollection = data.treasures; saveTreasures(); }
+    if (data.cash !== undefined) cashBalance = data.cash;
+    if (data.withdrawable !== undefined) withdrawable = data.withdrawable;
+    if (data.investments) investments = data.investments;
+    if (data.investHistory) investHistory = data.investHistory;
+    if (data.stockPrices) stockPrices = data.stockPrices;
+    if (data.dailySolved !== undefined) dailySolved = data.dailySolved;
+    if (data.lastSettleDate) lastSettleDate = data.lastSettleDate;
+    if (data.settleHistory) settleHistory = data.settleHistory;
+    saveFinance();
+    saveDaily();
+    updateTreasureBoxUI();
+    updateCashDisplay();
+    renderTreasureGrid();
+}
+
+function exportAllData() {
+    const blob = new Blob([JSON.stringify(buildSaveObject(), null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `sea_treasure_${new Date().toISOString().slice(0,10)}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+    showFeedback('数据已导出!');
+}
+
+function importAllData(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        try {
+            applySaveObject(JSON.parse(e.target.result));
+            showFeedback('数据导入成功!');
+            scheduleCloudPush(); // 导入后同步到云端
+        } catch(err) {
+            showFeedback('导入失败: 文件格式错误');
+        }
+    };
+    reader.readAsText(file);
+    event.target.value = '';
+}
+
+// ===================================================================
+// ===== 云同步 (Supabase + 同步码) =====
+// 在两台设备输入同一个「同步码」, 存档即自动跟随。
+// 填写下面两个常量后生效 (Supabase → Project Settings → API):
+const SUPABASE_URL = 'https://vlfywndejftdhpmfljpb.supabase.co'; // Project URL (不带 /rest/v1/)
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZsZnl3bmRlamZ0ZGhwbWZsanBiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE4MzMzMTEsImV4cCI6MjA5NzQwOTMxMX0.NsYRmI24Lv_0lRlsqFh6-48RhwoPM_mwVOrD5JRTKOc'; // anon public key
+// ===================================================================
+
+let syncCode = localStorage.getItem('seaSyncCode') || '';
+let seaSyncVersion = parseInt(localStorage.getItem('seaSyncVersion') || '0');
+let applyingCloud = false;   // 拉取应用云端数据时为 true, 防止回写造成循环
+let cloudPushTimer = null;
+
+function cloudConfigured() { return !!(SUPABASE_URL && SUPABASE_ANON_KEY); }
+function cloudEnabled() { return cloudConfigured() && !!syncCode; }
+
+function sbHeaders(extra) {
+    return Object.assign({
+        'apikey': SUPABASE_ANON_KEY,
+        'Authorization': 'Bearer ' + SUPABASE_ANON_KEY,
+        'Content-Type': 'application/json',
+    }, extra || {});
+}
+
+function setCloudStatus(text, color) {
+    const el = document.getElementById('cloudSyncStatus');
+    if (el) { el.textContent = text; el.style.color = color || 'rgba(255,255,255,0.55)'; }
+}
+
+// 本地数据有变化时调用: 提升版本号并防抖上传
+function scheduleCloudPush() {
+    if (applyingCloud || !cloudEnabled()) return;
+    seaSyncVersion = Date.now();
+    localStorage.setItem('seaSyncVersion', seaSyncVersion);
+    if (cloudPushTimer) clearTimeout(cloudPushTimer);
+    cloudPushTimer = setTimeout(cloudPush, 1500);
+}
+
+async function cloudPush() {
+    if (!cloudEnabled()) return;
+    const payload = buildSaveObject();
+    payload._v = seaSyncVersion;
+    try {
+        setCloudStatus('☁️ 同步中...', '#FFD700');
+        const res = await fetch(SUPABASE_URL + '/rest/v1/game_saves', {
+            method: 'POST',
+            headers: sbHeaders({ 'Prefer': 'resolution=merge-duplicates,return=minimal' }),
+            body: JSON.stringify([{ sync_code: syncCode, payload: payload, updated_at: new Date().toISOString() }]),
+        });
+        if (!res.ok) throw new Error(await res.text());
+        setCloudStatus('✅ 已同步到云端「' + syncCode + '」', '#43e97b');
+    } catch (e) {
+        setCloudStatus('⚠️ 同步失败, 稍后自动重试', '#ff6b6b');
+    }
+}
+
+async function cloudPull() {
+    if (!cloudEnabled()) return null;
+    const res = await fetch(SUPABASE_URL + '/rest/v1/game_saves?sync_code=eq.' + encodeURIComponent(syncCode) + '&select=payload', {
+        headers: sbHeaders(),
+    });
+    if (!res.ok) throw new Error(await res.text());
+    const rows = await res.json();
+    return rows && rows.length ? rows[0].payload : null;
+}
+
+// 启动时同步: 比较版本号, 谁新用谁
+async function cloudSyncOnLoad() {
+    if (!cloudEnabled()) return;
+    setCloudStatus('☁️ 检查云端存档...', '#FFD700');
+    try {
+        const cloud = await cloudPull();
+        if (!cloud) { await cloudPush(); return; }
+        const cloudV = cloud._v || 0;
+        if (cloudV > seaSyncVersion) {
+            applyingCloud = true;
+            applySaveObject(cloud);
+            applyingCloud = false;
+            seaSyncVersion = cloudV;
+            localStorage.setItem('seaSyncVersion', seaSyncVersion);
+            setCloudStatus('✅ 已载入云端最新存档', '#43e97b');
+        } else if (seaSyncVersion > cloudV) {
+            await cloudPush();
+        } else {
+            setCloudStatus('✅ 已是最新「' + syncCode + '」', '#43e97b');
+        }
+    } catch (e) {
+        setCloudStatus('⚠️ 连接云端失败 (离线也可玩)', '#ff6b6b');
+    }
+}
+
+// 用户在面板里设置/切换同步码
+async function applySyncCode() {
+    if (!cloudConfigured()) { setCloudStatus('⚠️ 未配置 Supabase', '#ff6b6b'); return; }
+    const input = document.getElementById('syncCodeInput');
+    const code = (input.value || '').trim();
+    if (!code) { setCloudStatus('请输入同步码', '#ff6b6b'); return; }
+    syncCode = code;
+    localStorage.setItem('seaSyncCode', syncCode);
+    try {
+        setCloudStatus('☁️ 连接中...', '#FFD700');
+        const cloud = await cloudPull();
+        if (cloud) {
+            applyingCloud = true;
+            applySaveObject(cloud);
+            applyingCloud = false;
+            seaSyncVersion = cloud._v || Date.now();
+            localStorage.setItem('seaSyncVersion', seaSyncVersion);
+            setCloudStatus('✅ 已载入「' + syncCode + '」的云端存档', '#43e97b');
+        } else {
+            seaSyncVersion = Date.now();
+            localStorage.setItem('seaSyncVersion', seaSyncVersion);
+            await cloudPush();
+            setCloudStatus('✅ 已创建并上传到「' + syncCode + '」', '#43e97b');
+        }
+    } catch (e) {
+        setCloudStatus('⚠️ 连接失败, 请检查网络/配置', '#ff6b6b');
+    }
+}
+
+// 手动强制从云端拉取 (覆盖本地)
+async function cloudPullManual() {
+    if (!cloudEnabled()) { setCloudStatus('请先设置同步码', '#ff6b6b'); return; }
+    try {
+        setCloudStatus('☁️ 拉取中...', '#FFD700');
+        const cloud = await cloudPull();
+        if (!cloud) { setCloudStatus('云端暂无此同步码的存档', '#ff6b6b'); return; }
+        applyingCloud = true;
+        applySaveObject(cloud);
+        applyingCloud = false;
+        seaSyncVersion = cloud._v || Date.now();
+        localStorage.setItem('seaSyncVersion', seaSyncVersion);
+        setCloudStatus('✅ 已拉取云端存档', '#43e97b');
+    } catch (e) {
+        setCloudStatus('⚠️ 拉取失败', '#ff6b6b');
+    }
+}
+
+// 打开面板时刷新同步码 UI
+function refreshCloudUI() {
+    const input = document.getElementById('syncCodeInput');
+    if (input && !input.value) input.value = syncCode;
+    if (!cloudConfigured()) { setCloudStatus('未配置云同步 (仅本机存档)', 'rgba(255,255,255,0.45)'); return; }
+    if (!syncCode) { setCloudStatus('输入同步码即可跨设备同步', 'rgba(255,255,255,0.55)'); return; }
+    setCloudStatus('当前同步码「' + syncCode + '」', 'rgba(255,255,255,0.7)');
+}
+
+// Pause/resume timers when treasure modal opens/closes
+let pausedQuestionTimer = false;
+let pausedPickTimer = false;
+
+function pauseSeaTimers() {
+    if (questionTimerId) { clearInterval(questionTimerId); questionTimerId = null; pausedQuestionTimer = true; }
+    if (pickTimerId) { clearInterval(pickTimerId); pickTimerId = null; pausedPickTimer = true; }
+}
+
+function resumeSeaTimers() {
+    if (pausedQuestionTimer && questionTimeLeft > 0 && !seaPickMode) {
+        pausedQuestionTimer = false;
+        const timerEl = document.getElementById('seaQuestionTimer');
+        const textEl = document.getElementById('seaTimerText');
+        timerEl.style.display = 'flex';
+        questionTimerId = setInterval(() => {
+            questionTimeLeft--;
+            textEl.textContent = questionTimeLeft;
+            if (questionTimeLeft <= 5) timerEl.classList.add('warning');
+            if (questionTimeLeft <= 0) { clearQuestionTimer(); onQuestionTimeout(); }
+        }, 1000);
+    }
+    if (pausedPickTimer && pickTimeLeft > 0 && seaPickMode) {
+        pausedPickTimer = false;
+        const timerEl = document.getElementById('seaQuestionTimer');
+        const textEl = document.getElementById('seaTimerText');
+        timerEl.style.display = 'flex';
+        pickTimerId = setInterval(() => {
+            pickTimeLeft--;
+            textEl.textContent = pickTimeLeft;
+            if (pickTimeLeft <= 5) timerEl.classList.add('warning');
+            const elapsed = 30 - pickTimeLeft;
+            if (elapsed >= 5 && elapsed % 5 === 0 && thawIndex < thawBatches.length) {
+                thawBatches[thawIndex].forEach(el => {
+                    el.classList.add('sea-thawed'); el.classList.remove('sea-collectible');
+                    el.style.cursor = 'default'; el.removeEventListener('click', onPickItem);
+                });
+                thawIndex++;
+            }
+            if (pickTimeLeft <= 0) endPickMode();
+        }, 1000);
+    }
+}
+
+function openTreasureModal() {
+    pauseSeaTimers();
+    updateCashDisplay();
+    switchTab('items');
+    document.getElementById('treasureModal').classList.add('show');
+    refreshCloudUI();
+    fetchStockPrices();
+}
+
+function closeTreasureModal() {
+    document.getElementById('treasureModal').classList.remove('show');
+    resumeSeaTimers();
+    setTimeout(() => {
+        const input = document.getElementById('sea-q-input');
+        if (input && currentPage === 'sea-game') input.focus();
+    }, 100);
+}
+
+// ===== KEYBOARD =====
+document.addEventListener('keydown', (e) => {
+    if (currentPage === 'sea-game' && e.key === 'Enter') {
+        if (seaPickMode) return;
+        if (document.getElementById('treasureModal').classList.contains('show')) return;
+        checkSeaAnswer(); return;
+    }
+});
+
+document.getElementById('treasureModal').addEventListener('click', function(e) { if(e.target===this) closeTreasureModal(); });
+document.getElementById('withdrawDialog').addEventListener('click', function(e) { if(e.target===this) this.classList.remove('show'); });
+
+
+// Migrate old treasure names/imgs to new names in localStorage
+(function migrateTreasureNames() {
+    const nameMap = {
+        'ts1_1':  { name: '彩虹珍珠球',  img: 'treasures/彩虹珍珠球.png' },
+        'ts1_2':  { name: '星标船舵',    img: 'treasures/星标船舵.png' },
+        'ts1_3':  { name: '海星漂流瓶',  img: 'treasures/海星漂流瓶.png' },
+        'ts1_4':  { name: '皮革望远镜',  img: 'treasures/皮革望远镜.png' },
+        'ts1_5':  { name: '粉金海螺',    img: 'treasures/粉金海螺.png' },
+        'ts1_6':  { name: '五彩水晶',    img: 'treasures/五彩水晶.png' },
+        'ts1_7':  { name: '海星金袋',    img: 'treasures/海星金袋.png' },
+        'ts1_8':  { name: '紫贝珠宝箱',  img: 'treasures/紫贝珠宝箱.png' },
+        'ts1_9':  { name: '贝壳钥匙',    img: 'treasures/贝壳钥匙.png' },
+        'ts1_10': { name: '蓝金海星勋章', img: 'treasures/蓝金海星勋章.png' },
+        'ts2_1':  { name: '珊瑚水晶球',  img: 'treasures/珊瑚水晶球.png' },
+        'ts2_2':  { name: '老船舵',      img: 'treasures/老船舵.png' },
+        'ts2_3':  { name: '红绳漂流瓶',  img: 'treasures/红绳漂流瓶.png' },
+        'ts2_4':  { name: '海星望远镜',  img: 'treasures/海星望远镜.png' },
+        'ts2_5':  { name: '金边粉海螺',  img: 'treasures/金边粉海螺.png' },
+        'ts2_6':  { name: '紫水晶',      img: 'treasures/紫水晶.png' },
+        'ts2_7':  { name: '蓝布金袋',    img: 'treasures/蓝布金袋.png' },
+        'ts2_8':  { name: '船锚钥匙',    img: 'treasures/船锚钥匙.png' },
+        'ts2_9':  { name: '宝石海星勋章', img: 'treasures/宝石海星勋章.png' },
+        'ts2_10': { name: '粉贝珠宝箱',  img: 'treasures/粉贝珠宝箱.png' },
+        'ts3_1':  { name: '沉船舵轮',    img: 'treasures/沉船舵轮.png' },
+        'ts3_2':  { name: '珊瑚漂流瓶',  img: 'treasures/珊瑚漂流瓶.png' },
+        'ts3_3':  { name: '金光水晶球',  img: 'treasures/金光水晶球.png' },
+        'ts3_4':  { name: '蓝紫水晶',    img: 'treasures/蓝紫水晶.png' },
+        'ts3_5':  { name: '船锚金袋',    img: 'treasures/船锚金袋.png' },
+        'ts3_6':  { name: '黑金望远镜',  img: 'treasures/黑金望远镜.png' },
+        'ts3_7':  { name: '紫珠海螺',    img: 'treasures/紫珠海螺.png' },
+        'ts3_8':  { name: '海星勋章',    img: 'treasures/海星勋章.png' },
+        'ts3_9':  { name: '紫贝宝盒',    img: 'treasures/紫贝宝盒.png' },
+        'ts3_10': { name: '船锚古钥匙',  img: 'treasures/船锚古钥匙.png' },
+    };
+    let changed = false;
+    treasureCollection.forEach(item => {
+        const mapping = nameMap[item.id];
+        if (mapping && (item.name !== mapping.name || item.img !== mapping.img)) {
+            item.name = mapping.name;
+            item.img = mapping.img;
+            changed = true;
+        }
+    });
+    if (changed) saveTreasures();
+})();
+
+// Init treasure box on load
+updateTreasureBoxUI();
+
+// Daily settlement (本地时间) on page load + click-outside handler for settle modal
+document.getElementById('settleModal').addEventListener('click', function(e) {
+    if (e.target === this) this.classList.remove('show');
+});
+
+// 启动流程: 先从云端同步最新存档(若已配置同步码), 再做每日结算
+(async function initLoad() {
+    if (cloudEnabled()) {
+        try { await cloudSyncOnLoad(); } catch (e) {}
+    }
+    runDailySettlement(false);
+})();
+</script>
+</body>
+</html>

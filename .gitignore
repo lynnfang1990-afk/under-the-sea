@@ -1,0 +1,10 @@
+# 系统/工具文件
+.DS_Store
+.gstack/
+.claude/
+
+# 内部文档与杂项, 不发布到公开站点
+docs/
+record/
+assets/
+light_demo.html
