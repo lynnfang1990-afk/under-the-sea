@@ -2293,9 +2293,12 @@ function importAllData(event) {
 // 填写下面两个常量后生效 (Supabase → Project Settings → API):
 const SUPABASE_URL = 'https://vlfywndejftdhpmfljpb.supabase.co'; // Project URL (不带 /rest/v1/)
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZsZnl3bmRlamZ0ZGhwbWZsanBiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE4MzMzMTEsImV4cCI6MjA5NzQwOTMxMX0.NsYRmI24Lv_0lRlsqFh6-48RhwoPM_mwVOrD5JRTKOc'; // anon public key
+// 默认同步码: 内置后无需人工填写, 打开游戏即自动用它同步。所有设备共用同一份存档。
+// 想换成更私密的, 改这里即可 (Mac 和 iPad 会自动用同一个新值)。
+const DEFAULT_SYNC_CODE = 'vivien-sea-2026';
 // ===================================================================
 
-let syncCode = localStorage.getItem('seaSyncCode') || '';
+let syncCode = localStorage.getItem('seaSyncCode') || DEFAULT_SYNC_CODE;
 let seaSyncVersion = parseInt(localStorage.getItem('seaSyncVersion') || '0');
 let applyingCloud = false;   // 拉取应用云端数据时为 true, 防止回写造成循环
 let cloudPushTimer = null;
