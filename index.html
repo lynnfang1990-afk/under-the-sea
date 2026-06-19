@@ -75,10 +75,10 @@
         .hud-item { display: flex; align-items: center; gap: 8px; }
         .game-question {
             position: absolute; bottom: 8%; left: 50%; transform: translateX(-50%);
-            background: rgba(255,255,255,0.92); border-radius: 18px; padding: 8px 16px;
-            display: flex; align-items: center; gap: 10px; box-shadow: 0 6px 24px rgba(0,0,0,0.18); z-index: 20;
+            background: rgba(255,255,255,0.92); border-radius: 14px; padding: 5px 12px;
+            display: flex; align-items: center; gap: 8px; box-shadow: 0 4px 18px rgba(0,0,0,0.16); z-index: 20;
         }
-        .game-q-text { font-size: 1.5rem; font-weight: 900; color: #333; }
+        .game-q-text { font-size: 1.15rem; font-weight: 900; color: #333; }
         .game-q-input { width: 80px; height: 55px; font-size: 2rem; font-weight: 900; font-family: 'Nunito', sans-serif; text-align: center; border: 3px solid #ddd; border-radius: 15px; outline: none; }
         .game-q-input:focus { border-color: #667eea; }
         .game-q-input.correct { border-color: #43e97b; background: #f0fff4; }
@@ -86,11 +86,11 @@
         .game-q-btn { width: 55px; height: 55px; border: none; border-radius: 50%; background: linear-gradient(135deg, #667eea, #764ba2); color: white; font-size: 1.5rem; cursor: pointer; transition: all 0.3s; }
         .game-q-btn:hover { transform: scale(1.1); }
         /* 答案选项 (点选, 替代数字输入, iPad 友好) */
-        .sea-options { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; }
+        .sea-options { display: flex; gap: 7px; flex-wrap: wrap; justify-content: center; }
         .sea-opt {
-            min-width: 48px; height: 44px; padding: 0 10px;
-            font-size: 1.35rem; font-weight: 900; font-family: 'Nunito', sans-serif;
-            border: 2px solid #cdd6e8; border-radius: 12px; background: #fff; color: #333;
+            min-width: 42px; height: 38px; padding: 0 8px;
+            font-size: 1.15rem; font-weight: 900; font-family: 'Nunito', sans-serif;
+            border: 2px solid #cdd6e8; border-radius: 10px; background: #fff; color: #333;
             cursor: pointer; transition: transform 0.1s, background 0.2s, border-color 0.2s;
             -webkit-tap-highlight-color: transparent; touch-action: manipulation;
         }
@@ -427,7 +427,7 @@
             background: linear-gradient(180deg, #1a3a5c, #0d2137);
             border: 3px solid rgba(255,215,0,0.4);
             border-radius: 30px; padding: 18px 22px; text-align: center;
-            max-width: 550px; width: 92%; max-height: 84vh;
+            max-width: 550px; width: 92%; max-height: 70vh;
             box-shadow: 0 20px 60px rgba(0,0,0,0.5); animation: slideUp 0.4s ease-out;
             overflow-y: auto;
         }
