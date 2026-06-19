@@ -85,6 +85,20 @@
         .game-q-input.wrong { border-color: #ff6b6b; background: #fff5f5; animation: shake 0.5s; }
         .game-q-btn { width: 55px; height: 55px; border: none; border-radius: 50%; background: linear-gradient(135deg, #667eea, #764ba2); color: white; font-size: 1.5rem; cursor: pointer; transition: all 0.3s; }
         .game-q-btn:hover { transform: scale(1.1); }
+        /* 答案选项 (点选, 替代数字输入, iPad 友好) */
+        .sea-options { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; }
+        .sea-opt {
+            min-width: 64px; height: 58px; padding: 0 16px;
+            font-size: 1.9rem; font-weight: 900; font-family: 'Nunito', sans-serif;
+            border: 3px solid #cdd6e8; border-radius: 16px; background: #fff; color: #333;
+            cursor: pointer; transition: transform 0.1s, background 0.2s, border-color 0.2s;
+            -webkit-tap-highlight-color: transparent; touch-action: manipulation;
+        }
+        .sea-opt:hover { border-color: #667eea; }
+        .sea-opt:active { transform: scale(0.93); }
+        .sea-opt.correct { background: #43e97b; border-color: #2bbf63; color: #fff; }
+        .sea-opt.wrong { background: #ff6b6b; border-color: #e23e3e; color: #fff; animation: shake 0.4s; }
+        .sea-opt.disabled { pointer-events: none; opacity: 0.9; }
 
 
         /* ===== UNDER THE SEA ===== */
@@ -571,10 +585,9 @@
         <div id="seaFloorContainer"></div>
     </div>
 
-    <div class="game-question" id="seaQuestion" style="background:rgba(255,255,255,0.92)">
-        <span class="game-q-text" id="sea-q-text">3 + 5 = </span>
-        <input type="number" class="game-q-input" id="sea-q-input" autocomplete="off" inputmode="numeric">
-        <button class="game-q-btn" onclick="checkSeaAnswer()">&#10004;</button>
+    <div class="game-question" id="seaQuestion" style="background:rgba(255,255,255,0.92);flex-direction:column;gap:10px">
+        <span class="game-q-text" id="sea-q-text">3 + 5 = ?</span>
+        <div class="sea-options" id="seaOptions"></div>
     </div>
 </div>
 
@@ -813,6 +826,46 @@ function generateSeaQuestion() {
     const wantCarry = Math.random() < 0.7;
     if (adventureType === 'mul') return generateQuestion('mul');
     return generateQuestion('mix', wantCarry);
+}
+
+// 生成 5 个相近的备选答案(含正确答案), 位置随机。
+// 个位数答案 → 备选也都是个位数; 多位数答案 → 5 个连续相近数。
+function makeAnswerOptions(ans) {
+    const single = ans <= 9;
+    const minV = 0;
+    const maxV = single ? 9 : ans + 6;
+    const off = Math.floor(Math.random() * 5); // 0-4: 让正确答案在窗口里的位置随机
+    let start = ans - off;
+    if (start < minV) start = minV;
+    if (start + 4 > maxV) start = maxV - 4;
+    if (start < minV) start = minV;
+    const opts = [];
+    for (let i = 0; i < 5; i++) opts.push(start + i);
+    return shuffle(opts); // 显示顺序也打乱
+}
+
+let seaOptionsLocked = false;
+function renderSeaOptions(ans) {
+    const box = document.getElementById('seaOptions');
+    box.innerHTML = '';
+    seaOptionsLocked = false;
+    makeAnswerOptions(ans).forEach(v => {
+        const b = document.createElement('button');
+        b.className = 'sea-opt';
+        b.textContent = v;
+        b.dataset.val = v;
+        b.onclick = () => { if (!seaOptionsLocked) checkSeaAnswer(v); };
+        box.appendChild(b);
+    });
+}
+function lockSeaOptions() {
+    seaOptionsLocked = true;
+    document.querySelectorAll('#seaOptions .sea-opt').forEach(b => b.classList.add('disabled'));
+}
+function markSeaOption(val, cls) {
+    document.querySelectorAll('#seaOptions .sea-opt').forEach(b => {
+        if (parseInt(b.dataset.val) === val) b.classList.add(cls);
+    });
 }
 
 function showFeedback(text) {
@@ -1261,6 +1314,8 @@ function clearQuestionTimer() {
 }
 
 function onQuestionTimeout() {
+    lockSeaOptions();
+    if (seaQuestion) markSeaOption(seaQuestion.answer, 'correct'); // 揭示正确答案
     seaWrong++;
     document.getElementById('sea-wrong').textContent = seaWrong;
     showFeedback('\u231b 时间到!');
@@ -1276,23 +1331,23 @@ let thawBatches = []; // arrays of elements to thaw at each batch
 let thawIndex = 0;
 let hasCollected = false; // whether child already collected 1 item
 
-function checkSeaAnswer() {
-    if (seaPickMode) return;
-    const input = document.getElementById('sea-q-input');
-    const val = parseInt(input.value);
-    if (isNaN(val)) return;
+function checkSeaAnswer(picked) {
+    if (seaPickMode || seaOptionsLocked) return;
+    if (typeof picked !== 'number' || isNaN(picked)) return;
 
     clearQuestionTimer();
+    lockSeaOptions();
 
-    if (val === seaQuestion.answer) {
-        input.className = 'game-q-input correct';
+    if (picked === seaQuestion.answer) {
+        markSeaOption(picked, 'correct');
         seaCorrect++;
         bumpDailySolved();
         document.getElementById('sea-correct').textContent = seaCorrect;
         showFeedback('\u2b50 正确!');
         setTimeout(() => enablePickMode(), 800);
     } else {
-        input.className = 'game-q-input wrong';
+        markSeaOption(picked, 'wrong');
+        markSeaOption(seaQuestion.answer, 'correct'); // 同时高亮正确答案
         seaWrong++;
         document.getElementById('sea-wrong').textContent = seaWrong;
         showFeedback('\u274c ' + seaQuestion.text + ' = ' + seaQuestion.answer);
@@ -1314,9 +1369,8 @@ function loseTreasurePenalty() {
 
 function nextSeaQuestion() {
     seaQuestion = generateSeaQuestion();
-    document.getElementById('sea-q-text').textContent = seaQuestion.text + ' = ';
-    const input = document.getElementById('sea-q-input');
-    input.value = ''; input.className = 'game-q-input'; input.focus();
+    document.getElementById('sea-q-text').textContent = seaQuestion.text + ' = ?';
+    renderSeaOptions(seaQuestion.answer);
 
     // Set timer based on carry/borrow
     const timeLimit = seaQuestion.hasCarry ? 60 : 30;
@@ -2533,18 +2587,16 @@ function openTreasureModal() {
 function closeTreasureModal() {
     document.getElementById('treasureModal').classList.remove('show');
     resumeSeaTimers();
-    setTimeout(() => {
-        const input = document.getElementById('sea-q-input');
-        if (input && currentPage === 'sea-game') input.focus();
-    }, 100);
 }
 
-// ===== KEYBOARD =====
+// ===== KEYBOARD (可选: 桌面端按 1-5 选第 N 个选项) =====
 document.addEventListener('keydown', (e) => {
-    if (currentPage === 'sea-game' && e.key === 'Enter') {
-        if (seaPickMode) return;
-        if (document.getElementById('treasureModal').classList.contains('show')) return;
-        checkSeaAnswer(); return;
+    if (currentPage !== 'sea-game' || seaPickMode || seaOptionsLocked) return;
+    if (document.getElementById('treasureModal').classList.contains('show')) return;
+    const n = parseInt(e.key);
+    if (n >= 1 && n <= 5) {
+        const btns = document.querySelectorAll('#seaOptions .sea-opt');
+        if (btns[n - 1]) checkSeaAnswer(parseInt(btns[n - 1].dataset.val));
     }
 });
 
