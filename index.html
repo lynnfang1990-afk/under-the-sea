@@ -1796,6 +1796,8 @@ const STOCKS = [
     { symbol: 'NVDA', name: 'NVIDIA', emoji: '&#127918;' },
     { symbol: 'AAPL', name: 'Apple', emoji: '&#127822;' },
     { symbol: 'QQQ',  name: 'QQQ ETF', emoji: '&#128200;' },
+    { symbol: 'SPCX', name: 'SpaceX', emoji: '&#128640;' },
+    { symbol: 'MCD',  name: "McDonald's", emoji: '&#127828;' },
 ];
 let stockPrices = {}; // { TSLA: 180.5, ... }
 let stockPricesLoading = false;
@@ -1803,7 +1805,7 @@ let stockPricesLoading = false;
 // Latest verified prices (2026-05-30) as fallback
 // Alpha Vantage API (unlimited key, CORS-enabled)
 const AV_KEY = 'HQZ8R27E4WIZV9TI';
-const FALLBACK_PRICES = { TSLA: 435.79, INTC: 114.68, NVDA: 211.14, AAPL: 312.06, QQQ: 738.31 };
+const FALLBACK_PRICES = { TSLA: 435.79, INTC: 114.68, NVDA: 211.14, AAPL: 312.06, QQQ: 738.31, SPCX: 162.00, MCD: 280.63 };
 let stockStatus = {}; // per-symbol: 'ok' | 'loading' | 'failed'
 
 // Fetch latest trade price via intraday 1min, fallback to GLOBAL_QUOTE
