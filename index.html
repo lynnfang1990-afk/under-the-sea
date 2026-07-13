@@ -848,27 +848,27 @@ function generateQuestion(type, forceCarry) {
 }
 
 // ===== 新题型生成器 =====
-// 题型3: 两位数+两位数 / 两位数±一位数 (和不超过99)
+// 题型3: 两位数+两位数 (60s) / 两位数±一位数 (30s), 和不超过99
 function genTwoDigitMixed() {
     const variant = Math.floor(Math.random() * 3);
-    let a, b, op, answer;
+    let a, b, op, answer, timeLimit;
     if (variant === 0) {
         // 两位数 + 两位数, 和 ≤ 99
         a = 10 + Math.floor(Math.random() * 80);           // 10-89
         b = 10 + Math.floor(Math.random() * (90 - a));     // 10..(99-a)
-        op = '+'; answer = a + b;
+        op = '+'; answer = a + b; timeLimit = 60;
     } else if (variant === 1) {
         // 两位数 + 一位数, 和 ≤ 99
         a = 10 + Math.floor(Math.random() * 89);           // 10-98
         b = 1 + Math.floor(Math.random() * Math.min(9, 99 - a));
-        op = '+'; answer = a + b;
+        op = '+'; answer = a + b; timeLimit = 30;
     } else {
         // 两位数 - 一位数
         a = 10 + Math.floor(Math.random() * 90);           // 10-99
         b = 1 + Math.floor(Math.random() * 9);             // 1-9
-        op = '-'; answer = a - b;
+        op = '-'; answer = a - b; timeLimit = 30;
     }
-    return { a, b, op, answer, text: `${a} ${op} ${b}`, hasCarry: false };
+    return { a, b, op, answer, text: `${a} ${op} ${b}`, hasCarry: false, timeLimit };
 }
 
 // 题型4: 两位数 - 两位数 (结果 ≥ 1)
@@ -888,8 +888,8 @@ function genSmallMul() {
 // 出题分发: 5 种题型按概率出现, 每题带自己的计时
 // 1) 10% 20以内加减无进/退位, 30s
 // 2) 20% 20以内加减有进/退位, 30s
-// 3) 30% 两位数+两位数 / 两位数±一位数, 30s
-// 4) 30% 两位数-两位数, 45s
+// 3) 30% 两位数+两位数 60s / 两位数±一位数 30s (时限在 genTwoDigitMixed 内按变体设置)
+// 4) 30% 两位数-两位数, 60s
 // 5) 10% 5以内乘法, 45s
 function generateSeaQuestion() {
     if (adventureType === 'mul') {
@@ -901,8 +901,8 @@ function generateSeaQuestion() {
     let q;
     if (r < 0.10)      { q = generateQuestion('mix', false); q.timeLimit = 30; }
     else if (r < 0.30) { q = generateQuestion('mix', true);  q.timeLimit = 30; }
-    else if (r < 0.60) { q = genTwoDigitMixed();             q.timeLimit = 30; }
-    else if (r < 0.90) { q = genTwoDigitSub();               q.timeLimit = 45; }
+    else if (r < 0.60) { q = genTwoDigitMixed(); }
+    else if (r < 0.90) { q = genTwoDigitSub();               q.timeLimit = 60; }
     else               { q = genSmallMul();                  q.timeLimit = 45; }
     return q;
 }
@@ -2743,7 +2743,13 @@ function openTreasureModal() {
 
 function closeTreasureModal() {
     document.getElementById('treasureModal').classList.remove('show');
-    resumeSeaTimers();
+    if (pausedQuestionTimer) {
+        // 答题中打开过宝箱: 关闭后换一道新题, 计时重置(不续用旧题剩余时间)
+        pausedQuestionTimer = false;
+        nextSeaQuestion();
+    } else {
+        resumeSeaTimers(); // 收集模式仍从暂停处继续
+    }
 }
 
 // ===== KEYBOARD (可选: 桌面端按 1-5 选第 N 个选项) =====
