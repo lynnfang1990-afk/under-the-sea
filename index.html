@@ -1812,7 +1812,7 @@ const STOCKS = [
     { symbol: 'QQQ',  name: 'QQQ ETF', emoji: '&#128200;' },
     { symbol: 'SPCX', name: 'SpaceX', emoji: '&#128640;' },
     { symbol: 'MCD',  name: "McDonald's", emoji: '&#127828;' },
-    { symbol: 'HSTECH.HK', name: '恒生科技指数', emoji: '&#127961;' }, // 港元报价, 不做汇率换算, 与其他标的共用通用货币
+    { symbol: 'KTEC', name: '恒生科技ETF', emoji: '&#127961;' }, // 美股上市的恒生科技指数 ETF (KraneShares)
 ];
 let stockPrices = {}; // { TSLA: 180.5, ... }
 let stockPricesLoading = false;
@@ -1820,7 +1820,7 @@ let stockPricesLoading = false;
 // Latest verified prices (2026-05-30) as fallback
 // Alpha Vantage API (unlimited key, CORS-enabled)
 const AV_KEY = 'HQZ8R27E4WIZV9TI';
-const FALLBACK_PRICES = { TSLA: 435.79, INTC: 114.68, NVDA: 211.14, AAPL: 312.06, QQQ: 738.31, SPCX: 162.00, MCD: 280.63, 'HSTECH.HK': 4108.24 };
+const FALLBACK_PRICES = { TSLA: 435.79, INTC: 114.68, NVDA: 211.14, AAPL: 312.06, QQQ: 738.31, SPCX: 162.00, MCD: 280.63, KTEC: 11.48 };
 let stockStatus = {}; // per-symbol: 'ok' | 'loading' | 'failed'
 
 // Fetch latest trade price via intraday 1min, fallback to GLOBAL_QUOTE
@@ -1949,6 +1949,30 @@ function renderStockPriceStatus() {
         timeEl.textContent = lastTime ? '更新: ' + new Date(lastTime).toLocaleTimeString() : '';
     }
 }
+
+// 迁移: 早期短暂上线的 HSTECH.HK(指数点位, Alpha Vantage 无数据) 改为 KTEC。
+// 未平仓/历史持仓按两者价格比例换算买入价, 保持投入金额与当时盈亏不变。
+(function migrateHstech() {
+    const RATIO = 11.48 / 4108.24;
+    let changed = false;
+    [investments, investHistory].forEach(list => (list || []).forEach(h => {
+        if (h && h.symbol === 'HSTECH.HK') {
+            h.symbol = 'KTEC';
+            if (h.buyPrice) h.buyPrice = Math.round(h.buyPrice * RATIO * 100) / 100;
+            if (h.sellPrice) h.sellPrice = Math.round(h.sellPrice * RATIO * 100) / 100;
+            changed = true;
+        }
+    }));
+    try {
+        const c = JSON.parse(localStorage.getItem('seaStockPrices') || '{}');
+        if ('HSTECH.HK' in c) { delete c['HSTECH.HK']; localStorage.setItem('seaStockPrices', JSON.stringify(c)); }
+    } catch (e) {}
+    if (changed) {
+        // 直接写本地(此时云同步模块尚未初始化), 下次任何存档变化会随之上云
+        localStorage.setItem('seaInvestments', JSON.stringify(investments));
+        localStorage.setItem('seaInvestHistory', JSON.stringify(investHistory));
+    }
+})();
 
 // Load cached prices on startup
 try {
