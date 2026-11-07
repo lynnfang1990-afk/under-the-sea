@@ -1891,99 +1891,34 @@ let stockPrices = {}; // { TSLA: 180.5, ... }
 let stockPricesLoading = false;
 
 // Latest verified prices (2026-05-30) as fallback
-// Alpha Vantage API (unlimited key, CORS-enabled)
-const AV_KEY = 'HQZ8R27E4WIZV9TI';
 const FALLBACK_PRICES = { TSLA: 435.79, INTC: 114.68, NVDA: 211.14, AAPL: 312.06, QQQ: 738.31, SPCX: 162.00, MCD: 280.63, KTEC: 11.48 };
 let stockStatus = {}; // per-symbol: 'ok' | 'loading' | 'failed'
 
-// Fetch latest trade price via intraday 1min, fallback to GLOBAL_QUOTE
-async function fetchOneStock(symbol) {
-    try {
-        const controller = new AbortController();
-        const timeout = setTimeout(() => controller.abort(), 15000);
-        // Try intraday first for latest trade price
-        const res = await fetch(
-            `https://www.alphavantage.co/query?function=TIME_SERIES_INTRADAY&symbol=${encodeURIComponent(symbol)}&interval=1min&outputsize=compact&apikey=${AV_KEY}`,
-            { signal: controller.signal }
-        );
-        clearTimeout(timeout);
-        if (res.ok) {
-            const data = await res.json();
-            const ts = data['Time Series (1min)'];
-            if (ts) {
-                const latestKey = Object.keys(ts).sort().pop();
-                if (latestKey) {
-                    stockPrices[symbol] = Math.round(parseFloat(ts[latestKey]['4. close']) * 100) / 100;
-                    stockStatus[symbol] = 'ok';
-                    return true;
-                }
-            }
-            // Fallback: try GLOBAL_QUOTE in same response cycle
-            const controller2 = new AbortController();
-            const timeout2 = setTimeout(() => controller2.abort(), 15000);
-            const res2 = await fetch(
-                `https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=${encodeURIComponent(symbol)}&apikey=${AV_KEY}`,
-                { signal: controller2.signal }
-            );
-            clearTimeout(timeout2);
-            if (res2.ok) {
-                const data2 = await res2.json();
-                const quote = data2['Global Quote'];
-                if (quote && quote['05. price']) {
-                    stockPrices[symbol] = Math.round(parseFloat(quote['05. price']) * 100) / 100;
-                    stockStatus[symbol] = 'ok';
-                    return true;
-                }
-            }
-        }
-    } catch(e) {}
-    return false;
-}
+let stockNextRefreshAt = 0;
+let stockRefreshed = false;
 
-// Fetch all stock prices with auto-retry for failures
+// 从服务端读取共用股价; 失败时保留本地价格
 async function fetchStockPrices() {
     if (stockPricesLoading) return;
     stockPricesLoading = true;
-
-    // Mark all as loading
     STOCKS.forEach(s => { stockStatus[s.symbol] = 'loading'; });
     renderStockPriceStatus();
 
-    // First pass: fetch all
-    const failed = [];
-    for (const stock of STOCKS) {
-        const ok = await fetchOneStock(stock.symbol);
-        if (ok) {
-            renderStockPriceStatus(); // update UI immediately for this stock
-        } else {
-            failed.push(stock.symbol);
-        }
-        await new Promise(r => setTimeout(r, 200));
+    try {
+        const res = await fetch(STOCKS_URL, { method: 'POST', headers: sbHeaders() });
+        if (!res.ok) throw new Error('stocks ' + res.status);
+        const data = await res.json();
+        STOCKS.forEach(s => {
+            const price = data.prices[s.symbol];
+            if (price) stockPrices[s.symbol] = price;
+            stockStatus[s.symbol] = price ? 'ok' : 'failed';
+        });
+        stockRefreshed = data.refreshed;
+        stockNextRefreshAt = Date.parse(data.nextRefreshAt) || 0;
+        if (data.fetchedAt) localStorage.setItem('seaStockPricesTime', Date.parse(data.fetchedAt));
+    } catch (e) {
+        STOCKS.forEach(s => { stockStatus[s.symbol] = 'failed'; });
     }
-
-    // Auto-retry failed ones (up to 2 retries, with backoff)
-    if (failed.length > 0) {
-        for (let retry = 0; retry < 2; retry++) {
-            await new Promise(r => setTimeout(r, 2000)); // wait 2s before retry
-            const stillFailed = [];
-            for (const sym of failed) {
-                if (stockStatus[sym] === 'ok') continue;
-                const ok = await fetchOneStock(sym);
-                if (ok) {
-                    renderStockPriceStatus();
-                } else {
-                    stillFailed.push(sym);
-                }
-                await new Promise(r => setTimeout(r, 300));
-            }
-            failed.length = 0;
-            failed.push(...stillFailed);
-            if (failed.length === 0) break;
-        }
-    }
-
-    // After retries, mark remaining as failed
-    failed.forEach(sym => { stockStatus[sym] = 'failed'; });
 
     // Fill any never-fetched with fallback (for first load)
     STOCKS.forEach(s => {
@@ -1992,7 +1927,6 @@ async function fetchStockPrices() {
 
     stockPricesLoading = false;
     localStorage.setItem('seaStockPrices', JSON.stringify(stockPrices));
-    localStorage.setItem('seaStockPricesTime', Date.now());
     renderStockPriceStatus();
     updateCashDisplay();
 }
@@ -2350,7 +2284,8 @@ async function refreshStockPrices() {
     renderInvestTab();
     const failedCount = STOCKS.filter(s => stockStatus[s.symbol] === 'failed').length;
     if (failedCount === 0) {
-        showFeedback('All prices updated!');
+        const minutes = Math.max(1, Math.ceil((stockNextRefreshAt - Date.now()) / 60000));
+        showFeedback(stockRefreshed ? 'All prices updated!' : 'Next price update in ' + minutes + ' min');
     } else {
         showFeedback('Stocks not refreshed: ' + failedCount);
     }
@@ -2650,6 +2585,7 @@ function importAllData(event) {
 const SUPABASE_URL = 'https://vlfywndejftdhpmfljpb.supabase.co'; // Project URL (不带 /rest/v1/)
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZsZnl3bmRlamZ0ZGhwbWZsanBiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE4MzMzMTEsImV4cCI6MjA5NzQwOTMxMX0.NsYRmI24Lv_0lRlsqFh6-48RhwoPM_mwVOrD5JRTKOc'; // anon public key
 const ACCOUNT_URL = SUPABASE_URL + '/functions/v1/account'; // 创建 key / 重发 key 的 Edge Function
+const STOCKS_URL = SUPABASE_URL + '/functions/v1/stocks';   // 所有玩家共用, 5 分钟刷新一次
 const KEY_PATTERN = /^[a-z0-9_-]{6,32}$/;
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 // ===================================================================
