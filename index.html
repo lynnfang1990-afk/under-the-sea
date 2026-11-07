@@ -555,34 +555,34 @@
 <!-- ===== LOGIN (输入游戏 key) ===== -->
 <div id="login" class="page active">
     <h1 class="home-title">&#127754; Under the Sea</h1>
-    <p class="home-subtitle">Enter your game key to start your treasure hunt!</p>
+    <p class="home-subtitle">Enter your game ID to start your treasure hunt!</p>
     <div class="login-card">
         <form id="loginPanelEnter" class="login-panel active" onsubmit="event.preventDefault(); enterWithKey()">
-            <label for="loginKey">Game key</label>
+            <label for="loginKey">Game ID</label>
             <input type="text" id="loginKey" maxlength="32" autocomplete="off" autocapitalize="none" autocorrect="off" spellcheck="false">
             <button type="submit" class="login-primary">Continue</button>
             <div class="login-links">
-                <button type="button" class="login-link" onclick="showLoginPanel('Create')">Create a new game</button>
-                <button type="button" class="login-link" onclick="showLoginPanel('Resend')">resend the key</button>
+                <button type="button" class="login-link" onclick="showLoginPanel('Create')">Create new game ID</button>
+                <button type="button" class="login-link" onclick="showLoginPanel('Resend')">Resend game ID</button>
             </div>
         </form>
         <form id="loginPanelCreate" class="login-panel" onsubmit="event.preventDefault(); createPlayer()">
-            <label for="createKey">Choose your game key</label>
+            <label for="createKey">Choose your game ID</label>
             <input type="text" id="createKey" maxlength="32" autocomplete="off" autocapitalize="none" autocorrect="off" spellcheck="false">
             <div class="login-hint">6-32 lowercase letters, numbers, - or _. Do not use a real name, a phone number, or a common word.</div>
-            <label for="createEmail">Email (we will send your key here)</label>
+            <label for="createEmail">Email (we will send your game ID here)</label>
             <input type="email" id="createEmail" maxlength="254" autocomplete="email" autocapitalize="none" autocorrect="off" spellcheck="false">
             <button type="submit" class="login-primary">Create</button>
             <div class="login-links"><button type="button" class="login-link" onclick="showLoginPanel('Enter')">Back</button></div>
         </form>
         <form id="loginPanelResend" class="login-panel" onsubmit="event.preventDefault(); resendKey()">
-            <label for="resendEmail">The email you used to create your key</label>
+            <label for="resendEmail">The email you used to create your game ID</label>
             <input type="email" id="resendEmail" maxlength="254" autocomplete="email" autocapitalize="none" autocorrect="off" spellcheck="false">
-            <button type="submit" class="login-primary">resend the key</button>
+            <button type="submit" class="login-primary">Resend game ID</button>
             <div class="login-links"><button type="button" class="login-link" onclick="showLoginPanel('Enter')">Back</button></div>
         </form>
         <div id="loginPanelCreated" class="login-panel">
-            <label>All set! Your game key is:</label>
+            <label>All set! Your game ID is:</label>
             <div class="login-created-key" id="createdKey"></div>
             <button type="button" class="login-primary" onclick="finishLogin()">Start playing</button>
         </div>
@@ -2840,7 +2840,7 @@ function finishLogin() {
 
 async function enterWithKey() {
     const key = normalizeKey(document.getElementById('loginKey').value);
-    if (!KEY_PATTERN.test(key)) { setLoginMessage('Your key has 6-32 lowercase letters, numbers, - or _'); return; }
+    if (!KEY_PATTERN.test(key)) { setLoginMessage('Your game ID has 6-32 lowercase letters, numbers, - or _'); return; }
     setLoginBusy(true);
     setLoginMessage('Connecting...', true);
     try {
@@ -2854,7 +2854,7 @@ async function enterWithKey() {
             finishLogin();
             return;
         }
-        if (!cloud) { setLoginMessage('Key not found. Check it, or create a new game'); return; }
+        if (!cloud) { setLoginMessage('Game ID not found. Check it, or create a new game ID'); return; }
         if (key === lastKey) {
             syncCode = key;
             await cloudSyncOnLoad();
@@ -2871,21 +2871,21 @@ async function enterWithKey() {
 async function createPlayer() {
     const key = normalizeKey(document.getElementById('createKey').value);
     const email = document.getElementById('createEmail').value.trim().toLowerCase();
-    if (!KEY_PATTERN.test(key)) { setLoginMessage('Your key needs 6-32 lowercase letters, numbers, - or _'); return; }
+    if (!KEY_PATTERN.test(key)) { setLoginMessage('Your game ID needs 6-32 lowercase letters, numbers, - or _'); return; }
     if (!EMAIL_PATTERN.test(email)) { setLoginMessage('Please enter a valid email'); return; }
     setLoginBusy(true);
     setLoginMessage('Creating...', true);
     try {
         if (!(await flushPreviousPlayer())) { setLoginMessage('The last player\'s progress is not saved yet. Please go online and try again'); return; }
         const data = await accountRequest({ action: 'create', key, email });
-        if (data.error === 'taken') { setLoginMessage('This key is taken. Please choose another one'); return; }
+        if (data.error === 'taken') { setLoginMessage('This game ID is taken. Please choose another one'); return; }
         if (data.error === 'rate_limited') { setLoginMessage('Too many tries today. Please try again tomorrow'); return; }
         if (data.error) { setLoginMessage('Could not create your game. Please try again later'); return; }
         loadPlayerSave(key, { version: 2, _v: 0 });
         document.getElementById('createdKey').textContent = key;
         showLoginPanel('Created');
-        if (data.emailSent) setLoginMessage('Your key has been sent to your email', true);
-        else setLoginMessage('The email could not be sent. Write down your key now. You can use resend the key later');
+        if (data.emailSent) setLoginMessage('Your game ID has been sent to your email', true);
+        else setLoginMessage('The email could not be sent. Write down your game ID now. You can use Resend game ID later');
     } catch (e) {
         setLoginMessage('Could not connect. Please try again later');
     } finally {
@@ -2918,7 +2918,7 @@ async function switchPlayer() {
 
 // 打开面板时显示当前玩家
 function refreshCloudUI() {
-    setCloudStatus('Current player key: "' + syncCode + '"', 'rgba(255,255,255,0.7)');
+    setCloudStatus('Current game ID: "' + syncCode + '"', 'rgba(255,255,255,0.7)');
 }
 
 // Pause/resume timers when treasure modal opens/closes
