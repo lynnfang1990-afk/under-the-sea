@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>算术小冒险</title>
+    <title>Under the Sea</title>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;700;900&display=swap');
         * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -14,7 +14,36 @@
         .page.active { display: flex; flex-direction: column; align-items: center; justify-content: center; }
 
         /* ===== HOME ===== */
-        #home { background: linear-gradient(180deg, #a8edea 0%, #fed6e3 50%, #ffecd2 100%); }
+        #home, #login { background: linear-gradient(180deg, #a8edea 0%, #fed6e3 50%, #ffecd2 100%); }
+
+        /* ===== LOGIN ===== */
+        #login { overflow-y: auto; padding: 16px; }
+        .login-card {
+            width: 100%; max-width: 400px; padding: 24px; border-radius: 25px;
+            background: rgba(255,255,255,0.92); box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        }
+        .login-panel { display: none; flex-direction: column; gap: 12px; }
+        .login-panel.active { display: flex; }
+        .login-panel label { font-weight: 700; color: #555; }
+        .login-panel input {
+            width: 100%; padding: 12px 14px; border-radius: 14px; border: 2px solid #fbc2eb;
+            font-family: inherit; font-size: 1.1rem; color: #333; background: white;
+        }
+        .login-primary {
+            padding: 13px; border: none; border-radius: 16px; cursor: pointer;
+            font-family: inherit; font-size: 1.15rem; font-weight: 900; color: white;
+            background: linear-gradient(135deg, #a18cd1, #fbc2eb); touch-action: manipulation;
+        }
+        .login-primary:disabled { opacity: 0.6; cursor: default; }
+        .login-links { display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+        .login-link {
+            border: none; background: none; cursor: pointer; padding: 6px 0;
+            font-family: inherit; font-size: 1rem; font-weight: 700; color: #7c5cbf; text-decoration: underline;
+        }
+        .login-hint { font-size: 0.85rem; color: #777; }
+        .login-created-key { font-size: 1.4rem; font-weight: 900; color: #ff6b6b; word-break: break-all; text-align: center; }
+        #loginMessage { min-height: 1.3em; margin-top: 10px; text-align: center; font-weight: 700; color: #e05555; }
+        #loginMessage.ok { color: #2e9e5b; }
         .home-title {
             font-size: 3.5rem; font-weight: 900; color: #ff6b6b;
             text-shadow: 3px 3px 0 #fff, 5px 5px 0 rgba(0,0,0,0.1);
@@ -523,8 +552,46 @@
 </head>
 <body>
 
+<!-- ===== LOGIN (输入游戏 key) ===== -->
+<div id="login" class="page active">
+    <h1 class="home-title">&#127754; Under the Sea</h1>
+    <p class="home-subtitle">Enter your game key to start your treasure hunt!</p>
+    <div class="login-card">
+        <form id="loginPanelEnter" class="login-panel active" onsubmit="event.preventDefault(); enterWithKey()">
+            <label for="loginKey">Game key</label>
+            <input type="text" id="loginKey" maxlength="32" autocomplete="off" autocapitalize="none" autocorrect="off" spellcheck="false">
+            <button type="submit" class="login-primary">Continue</button>
+            <div class="login-links">
+                <button type="button" class="login-link" onclick="showLoginPanel('Create')">Create a new game</button>
+                <button type="button" class="login-link" onclick="showLoginPanel('Resend')">resend the key</button>
+            </div>
+        </form>
+        <form id="loginPanelCreate" class="login-panel" onsubmit="event.preventDefault(); createPlayer()">
+            <label for="createKey">Choose your game key</label>
+            <input type="text" id="createKey" maxlength="32" autocomplete="off" autocapitalize="none" autocorrect="off" spellcheck="false">
+            <div class="login-hint">6-32 lowercase letters, numbers, - or _. Do not use a real name, a phone number, or a common word.</div>
+            <label for="createEmail">Email (we will send your key here)</label>
+            <input type="email" id="createEmail" maxlength="254" autocomplete="email" autocapitalize="none" autocorrect="off" spellcheck="false">
+            <button type="submit" class="login-primary">Create</button>
+            <div class="login-links"><button type="button" class="login-link" onclick="showLoginPanel('Enter')">Back</button></div>
+        </form>
+        <form id="loginPanelResend" class="login-panel" onsubmit="event.preventDefault(); resendKey()">
+            <label for="resendEmail">The email you used to create your key</label>
+            <input type="email" id="resendEmail" maxlength="254" autocomplete="email" autocapitalize="none" autocorrect="off" spellcheck="false">
+            <button type="submit" class="login-primary">resend the key</button>
+            <div class="login-links"><button type="button" class="login-link" onclick="showLoginPanel('Enter')">Back</button></div>
+        </form>
+        <div id="loginPanelCreated" class="login-panel">
+            <label>All set! Your game key is:</label>
+            <div class="login-created-key" id="createdKey"></div>
+            <button type="button" class="login-primary" onclick="finishLogin()">Start playing</button>
+        </div>
+        <div id="loginMessage" role="status"></div>
+    </div>
+</div>
+
 <!-- ===== HOME ===== -->
-<div id="home" class="page active">
+<div id="home" class="page">
     <div class="star" style="top:10%;left:10%"></div>
     <div class="star" style="top:15%;right:15%;animation-delay:0.5s"></div>
     <div class="star" style="top:25%;left:30%;animation-delay:1s;width:15px;height:15px"></div>
@@ -546,13 +613,13 @@
         <ellipse cx="90" cy="132" rx="14" ry="8" fill="#FF6B6B"/>
     </svg>
     <h1 class="home-title">&#127754; Under the Sea</h1>
-    <p class="home-subtitle">选择题目类型，开始海底探宝!</p>
+    <p class="home-subtitle">Pick your questions and start your treasure hunt!</p>
     <div class="practice-options">
         <button class="practice-card mix" onclick="startSea('mix')">
-            <span class="card-icon">&#10133;&#10134;</span>加减法<span class="card-desc">20以内~两位数加减 + 5以内乘法</span>
+            <span class="card-icon">&#10133;&#10134;</span>Addition &amp; Subtraction<span class="card-desc">Numbers up to 99, plus multiplying up to 5</span>
         </button>
         <button class="practice-card mul" onclick="startSea('mul')">
-            <span class="card-icon">&#10006;</span>乘法口诀<span class="card-desc">1~4的乘法表</span>
+            <span class="card-icon">&#10006;</span>Times Tables<span class="card-desc">Times tables 1 to 4</span>
         </button>
     </div>
 </div>
@@ -568,8 +635,8 @@
     </button>
 
     <div class="game-hud"><div class="hud-bar" style="background:rgba(0,20,80,0.6)">
-        <div class="hud-item"><span>&#11088;</span> 正确: <span id="sea-correct">0</span></div>
-        <div class="hud-item"><span>&#10060;</span> 错误: <span id="sea-wrong">0</span></div>
+        <div class="hud-item"><span>&#11088;</span> Correct: <span id="sea-correct">0</span></div>
+        <div class="hud-item"><span>&#10060;</span> Wrong: <span id="sea-wrong">0</span></div>
         <div class="hud-item"><span>&#127754;</span> Under the Sea</div>
     </div></div>
 
@@ -578,7 +645,7 @@
         <img src="picture/underthesea/countdown.png" alt="timer">
         <div class="sea-timer-num" id="seaTimerText">30</div>
     </div>
-    <div class="sea-pick-hint" id="seaPickHint" style="display:none">&#128073; 点击一个宝藏收集!</div>
+    <div class="sea-pick-hint" id="seaPickHint" style="display:none">&#128073; Tap one treasure to collect it!</div>
     <div class="sea-scene" id="seaScene">
         <!-- 4-layer underwater light system -->
         <div class="sea-godray-container">
@@ -607,16 +674,16 @@
     <div class="treasure-modal-card">
         <!-- Tab bar -->
         <div style="display:flex;gap:0;margin-bottom:15px;border-radius:14px;overflow:hidden;border:2px solid rgba(255,215,0,0.3)">
-            <button class="tab-btn active" onclick="switchTab('items')" id="tabItems" style="flex:1;padding:10px 6px;border:none;font-family:'Nunito',sans-serif;font-weight:700;font-size:0.9rem;cursor:pointer;background:rgba(255,215,0,0.2);color:#FFD700">&#128240; 宝藏箱</button>
-            <button class="tab-btn" onclick="switchTab('invest')" id="tabInvest" style="flex:1;padding:10px 6px;border:none;font-family:'Nunito',sans-serif;font-weight:700;font-size:0.9rem;cursor:pointer;background:rgba(255,255,255,0.05);color:rgba(255,255,255,0.5)">&#128200; 投资</button>
-            <button class="tab-btn" onclick="switchTab('wallet')" id="tabWallet" style="flex:1;padding:10px 6px;border:none;font-family:'Nunito',sans-serif;font-weight:700;font-size:0.9rem;cursor:pointer;background:rgba(255,255,255,0.05);color:rgba(255,255,255,0.5)">&#128091; 我的钱包</button>
+            <button class="tab-btn active" onclick="switchTab('items')" id="tabItems" style="flex:1;padding:10px 6px;border:none;font-family:'Nunito',sans-serif;font-weight:700;font-size:0.9rem;cursor:pointer;background:rgba(255,215,0,0.2);color:#FFD700">&#128240; Treasures</button>
+            <button class="tab-btn" onclick="switchTab('invest')" id="tabInvest" style="flex:1;padding:10px 6px;border:none;font-family:'Nunito',sans-serif;font-weight:700;font-size:0.9rem;cursor:pointer;background:rgba(255,255,255,0.05);color:rgba(255,255,255,0.5)">&#128200; Invest</button>
+            <button class="tab-btn" onclick="switchTab('wallet')" id="tabWallet" style="flex:1;padding:10px 6px;border:none;font-family:'Nunito',sans-serif;font-weight:700;font-size:0.9rem;cursor:pointer;background:rgba(255,255,255,0.05);color:rgba(255,255,255,0.5)">&#128091; Wallet</button>
         </div>
         <!-- Financial summary -->
         <div style="display:flex;flex-wrap:wrap;justify-content:center;gap:8px 16px;margin-bottom:12px;font-size:0.85rem">
-            <span style="color:white;font-weight:700" title="现金+投资市值">&#128176; 总金额: $<span id="totalValueDisplay">0</span></span>
-            <span id="totalPnlDisplay" style="font-weight:700" title="存款复利+股票MtM">&#128200; 总P&L: $0</span>
-            <span style="color:#4CAF50;font-weight:700">&#128181; 可投资: $<span id="cashDisplay">0</span></span>
-            <span style="color:#FFD700;font-weight:700;cursor:pointer;text-decoration:underline" onclick="showWithdraw()" title="已实现收益，可提现">&#128179; 可取现: $<span id="withdrawableDisplay">0</span></span>
+            <span style="color:white;font-weight:700" title="Cash plus investment value">&#128176; Total: $<span id="totalValueDisplay">0</span></span>
+            <span id="totalPnlDisplay" style="font-weight:700" title="Savings interest plus stock gains">&#128200; Total P&L: $0</span>
+            <span style="color:#4CAF50;font-weight:700">&#128181; To invest: $<span id="cashDisplay">0</span></span>
+            <span style="color:#FFD700;font-weight:700;cursor:pointer;text-decoration:underline" onclick="showWithdraw()" title="Realized gains you can withdraw">&#128179; Can withdraw: $<span id="withdrawableDisplay">0</span></span>
         </div>
         <div class="treasure-modal-subtitle" id="treasureModalSubtitle"></div>
         <!-- Items tab -->
@@ -628,61 +695,57 @@
         <!-- Wallet tab -->
         <div id="walletTabContent" style="display:none">
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px">
-                <div class="wallet-stat"><div class="wlbl">&#128091; 钱包余额</div><div class="wval" id="walletBalanceDisp" style="color:#FFD700">$0</div></div>
-                <div class="wallet-stat"><div class="wlbl">&#127975; 历史提现总额</div><div class="wval" id="walletWithdrawnDisp" style="color:#4FC3F7">$0</div></div>
-                <div class="wallet-stat"><div class="wlbl">&#128176; 历史收入总额</div><div class="wval" id="walletIncomeDisp" style="color:#69f0ae">$0</div></div>
-                <div class="wallet-stat"><div class="wlbl">&#129534; 历史支出总额</div><div class="wval" id="walletExpenseDisp" style="color:#ff8a8a">$0</div></div>
-                <div class="wallet-stat"><div class="wlbl">&#128197; 最近一周收入</div><div class="wval" id="walletWeekIncomeDisp" style="color:#a5d6a7">$0</div></div>
-                <div class="wallet-stat"><div class="wlbl">&#128197; 最近一周支出</div><div class="wval" id="walletWeekDisp" style="color:#ffb74d">$0</div></div>
+                <div class="wallet-stat"><div class="wlbl">&#128091; Wallet balance</div><div class="wval" id="walletBalanceDisp" style="color:#FFD700">$0</div></div>
+                <div class="wallet-stat"><div class="wlbl">&#127975; Total withdrawn</div><div class="wval" id="walletWithdrawnDisp" style="color:#4FC3F7">$0</div></div>
+                <div class="wallet-stat"><div class="wlbl">&#128176; Total earned</div><div class="wval" id="walletIncomeDisp" style="color:#69f0ae">$0</div></div>
+                <div class="wallet-stat"><div class="wlbl">&#129534; Total spent</div><div class="wval" id="walletExpenseDisp" style="color:#ff8a8a">$0</div></div>
+                <div class="wallet-stat"><div class="wlbl">&#128197; Earned this week</div><div class="wval" id="walletWeekIncomeDisp" style="color:#a5d6a7">$0</div></div>
+                <div class="wallet-stat"><div class="wlbl">&#128197; Spent this week</div><div class="wval" id="walletWeekDisp" style="color:#ffb74d">$0</div></div>
             </div>
             <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:8px">
-                <span id="walletEntryTitle" style="color:#fff;font-weight:700;font-size:0.95rem;text-align:left">&#9999;&#65039; 记一笔支出</span>
-                <div class="flow-toggle" id="flowToggle" data-type="expense" onclick="toggleFlowType()" role="switch" aria-label="切换支出/收入">
+                <span id="walletEntryTitle" style="color:#fff;font-weight:700;font-size:0.95rem;text-align:left">&#9999;&#65039; Add an expense</span>
+                <div class="flow-toggle" id="flowToggle" data-type="expense" onclick="toggleFlowType()" role="switch" aria-label="Switch between expense and income">
                     <div class="flow-knob"></div>
-                    <span class="flow-opt flow-opt-exp">支出</span>
-                    <span class="flow-opt flow-opt-inc">收入</span>
+                    <span class="flow-opt flow-opt-exp">Spend</span>
+                    <span class="flow-opt flow-opt-inc">Earn</span>
                 </div>
             </div>
             <div style="display:flex;gap:8px;margin-bottom:16px">
-                <input id="expenseName" class="wallet-input" placeholder="支出项目 (如: 买零食)" autocomplete="off" style="flex:1;min-width:0">
-                <input id="expenseAmount" class="wallet-input" type="number" inputmode="numeric" placeholder="金额" style="width:90px">
-                <button onclick="addExpense()" style="background:linear-gradient(135deg,#43e97b,#38f9d7);color:#0d2137;border:none;border-radius:12px;padding:0 18px;font-weight:900;font-size:0.95rem;cursor:pointer;font-family:'Nunito',sans-serif">+ 记录</button>
+                <input id="expenseName" class="wallet-input" placeholder="Item" autocomplete="off" style="flex:1;min-width:0">
+                <input id="expenseAmount" class="wallet-input" type="number" inputmode="numeric" placeholder="$" style="width:90px">
+                <button onclick="addExpense()" style="background:linear-gradient(135deg,#43e97b,#38f9d7);color:#0d2137;border:none;border-radius:12px;padding:0 18px;font-weight:900;font-size:0.95rem;cursor:pointer;font-family:'Nunito',sans-serif">+ Add</button>
             </div>
             <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
-                <span style="color:#fff;font-weight:700;font-size:0.95rem">最近收支 (最多 7 条)</span>
-                <button onclick="exportExpensesCSV()" style="background:linear-gradient(135deg,#667eea,#764ba2);color:#fff;border:none;border-radius:10px;padding:6px 14px;font-weight:700;font-size:0.8rem;cursor:pointer;font-family:'Nunito',sans-serif">&#128229; 导出明细</button>
+                <span style="color:#fff;font-weight:700;font-size:0.95rem">Recent activity (up to 7)</span>
+                <button onclick="exportExpensesCSV()" style="background:linear-gradient(135deg,#667eea,#764ba2);color:#fff;border:none;border-radius:10px;padding:6px 14px;font-weight:700;font-size:0.8rem;cursor:pointer;font-family:'Nunito',sans-serif">&#128229; Export</button>
             </div>
             <div id="walletExpenseList" style="background:rgba(0,0,0,0.2);border-radius:14px;overflow:hidden"></div>
         </div>
-        <!-- Cloud sync (Supabase + 同步码) -->
+        <!-- Cloud sync (Supabase + 游戏 key) -->
         <div style="margin-top:16px;padding:12px 14px;border-radius:14px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.12)">
             <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:center">
-                <span style="color:rgba(255,255,255,0.8);font-weight:700;font-size:0.85rem">&#9729;&#65039; 云同步</span>
-                <input type="text" id="syncCodeInput" placeholder="输入同步码 (两台设备用同一个)" autocomplete="off"
-                    style="flex:1;min-width:150px;padding:8px 12px;border-radius:10px;border:2px solid rgba(255,215,0,0.3);background:rgba(255,255,255,0.1);color:white;font-size:0.9rem;font-family:'Nunito',sans-serif;outline:none">
-                <button class="treasure-close-btn" style="background:linear-gradient(135deg,#FFD700,#FFA000);color:#333;font-size:0.85rem;padding:8px 16px" onclick="applySyncCode()">连接</button>
-                <button class="treasure-close-btn" style="background:linear-gradient(135deg,#43e97b,#38f9d7);color:#333;font-size:0.85rem;padding:8px 16px" onclick="cloudPushManual()">&#11014;&#65039; 上传本机</button>
-                <button class="treasure-close-btn" style="background:rgba(255,255,255,0.15);color:white;font-size:0.85rem;padding:8px 16px" onclick="cloudPullManual()">&#11015;&#65039; 拉取云端</button>
+                <span style="color:rgba(255,255,255,0.8);font-weight:700;font-size:0.85rem">&#9729;&#65039; Cloud sync</span>
+                <button class="treasure-close-btn" style="background:rgba(255,255,255,0.15);color:white;font-size:0.85rem;padding:8px 16px" onclick="switchPlayer()">Switch player</button>
             </div>
-            <div id="cloudSyncStatus" style="margin-top:8px;font-size:0.8rem;text-align:center;color:rgba(255,255,255,0.55)">未配置云同步 (仅本机存档)</div>
+            <div id="cloudSyncStatus" style="margin-top:8px;font-size:0.8rem;text-align:center;color:rgba(255,255,255,0.55)"></div>
         </div>
         <!-- Data buttons -->
         <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-top:15px">
-            <button class="treasure-close-btn" style="background:linear-gradient(135deg,#667eea,#764ba2);color:white;font-size:0.85rem;padding:8px 18px" onclick="exportAllData()">&#128190; 导出数据</button>
-            <label class="treasure-close-btn" style="background:linear-gradient(135deg,#43e97b,#38f9d7);color:#333;font-size:0.85rem;padding:8px 18px;cursor:pointer">&#128194; 导入数据<input type="file" accept=".json" onchange="importAllData(event)" style="display:none"></label>
-            <button class="treasure-close-btn" onclick="closeTreasureModal()">关闭</button>
+            <button class="treasure-close-btn" style="background:linear-gradient(135deg,#667eea,#764ba2);color:white;font-size:0.85rem;padding:8px 18px" onclick="exportAllData()">&#128190; Export data</button>
+            <label class="treasure-close-btn" style="background:linear-gradient(135deg,#43e97b,#38f9d7);color:#333;font-size:0.85rem;padding:8px 18px;cursor:pointer">&#128194; Import data<input type="file" accept=".json" onchange="importAllData(event)" style="display:none"></label>
+            <button class="treasure-close-btn" onclick="closeTreasureModal()">Close</button>
         </div>
     </div>
 </div>
 <!-- Withdraw dialog -->
 <div class="treasure-modal" id="withdrawDialog" style="z-index:450">
     <div class="treasure-modal-card" style="max-width:350px">
-        <div class="treasure-modal-title">&#128179; 提现</div>
-        <div style="color:rgba(255,255,255,0.7);margin-bottom:15px">可取现金额: $<span id="withdrawMax">0</span></div>
-        <input type="number" id="withdrawInput" min="0" step="1" placeholder="输入提现金额" style="width:100%;padding:12px;border-radius:12px;border:2px solid rgba(255,215,0,0.3);background:rgba(255,255,255,0.1);color:white;font-size:1.1rem;text-align:center;font-family:'Nunito',sans-serif;outline:none;margin-bottom:15px">
+        <div class="treasure-modal-title">&#128179; Withdraw</div>
+        <div style="color:rgba(255,255,255,0.7);margin-bottom:15px">Available to withdraw: $<span id="withdrawMax">0</span></div>
+        <input type="number" id="withdrawInput" min="0" step="1" placeholder="Amount to withdraw" style="width:100%;padding:12px;border-radius:12px;border:2px solid rgba(255,215,0,0.3);background:rgba(255,255,255,0.1);color:white;font-size:1.1rem;text-align:center;font-family:'Nunito',sans-serif;outline:none;margin-bottom:15px">
         <div style="display:flex;gap:10px;justify-content:center">
-            <button class="treasure-close-btn" style="background:#f0f0f0;color:#666" onclick="document.getElementById('withdrawDialog').classList.remove('show')">取消</button>
-            <button class="treasure-close-btn" onclick="confirmWithdraw()">确认提现</button>
+            <button class="treasure-close-btn" style="background:#f0f0f0;color:#666" onclick="document.getElementById('withdrawDialog').classList.remove('show')">Cancel</button>
+            <button class="treasure-close-btn" onclick="confirmWithdraw()">Withdraw</button>
         </div>
     </div>
 </div>
@@ -690,10 +753,10 @@
 <!-- Daily settlement modal -->
 <div class="treasure-modal" id="settleModal" style="z-index:460">
     <div class="treasure-modal-card" style="max-width:480px">
-        <div class="treasure-modal-title">&#127748; 每日结算</div>
+        <div class="treasure-modal-title">&#127748; Daily Report</div>
         <div id="settleModalBody" style="color:rgba(255,255,255,0.85);margin:15px 0;text-align:left;max-height:50vh;overflow-y:auto;font-size:0.95rem;line-height:1.6"></div>
         <div style="display:flex;gap:10px;justify-content:center;margin-top:15px">
-            <button class="treasure-close-btn" onclick="document.getElementById('settleModal').classList.remove('show')">知道了</button>
+            <button class="treasure-close-btn" onclick="document.getElementById('settleModal').classList.remove('show')">Got it</button>
         </div>
     </div>
 </div>
@@ -705,7 +768,7 @@
 const IMG = 'picture/underthesea/';
 
 // ===== GLOBAL STATE =====
-let currentPage = 'home';
+let currentPage = 'login';
 let adventureType = 'mix'; // 'mix' = 加减法, 'mul' = 乘法口诀
 
 // Sea state
@@ -719,72 +782,72 @@ let treasureCollection = JSON.parse(localStorage.getItem('seaTreasures') || '[]'
 // Sea animals (new set): facing, type (swim/seahorse/floor/jellyfish), sizeRange, speed, topRange
 // topRange capped at 70% to avoid overlapping the bottom question area (~15% height)
 const SEA_ANIMALS = [
-    { id: 'sa1',  name: '章鱼',     img: 'sea animal 1.png',  facing: 'front', type: 'floor',     sizeRange: [120, 175], speed: [15, 25] },
-    { id: 'sa2',  name: '水母',     img: 'sea animal 2.png',  facing: 'front', type: 'jellyfish', sizeRange: [85, 140],  speed: [20, 35], topRange: [5, 45] },
-    { id: 'sa3',  name: '灯笼鱼',   img: 'sea animal 3.png',  facing: 'left',  type: 'swim',      sizeRange: [80, 130],  speed: [14, 22], topRange: [15, 55] },
-    { id: 'sa4',  name: '海星',     img: 'sea animal 4.png',  facing: 'front', type: 'floor',     sizeRange: [65, 100],  speed: [30, 50] },
-    { id: 'sa5',  name: '寄居蟹',   img: 'sea animal 5.png',  facing: 'left',  type: 'floor',     sizeRange: [75, 110],  speed: [20, 35] },
-    { id: 'sa6',  name: '螃蟹',     img: 'sea animal 6.png',  facing: 'front', type: 'floor',     sizeRange: [85, 120],  speed: [18, 30] },
-    { id: 'sa7',  name: '河豚',     img: 'sea animal 7.png',  facing: 'front', type: 'swim',      sizeRange: [80, 130],  speed: [20, 32], topRange: [12, 50] },
-    { id: 'sa8',  name: '海胆',     img: 'sea animal 8.png',  facing: 'front', type: 'floor',     sizeRange: [55, 85],   speed: [35, 55] },
-    { id: 'sa9',  name: '电鳗',     img: 'sea animal 9.png',  facing: 'left',  type: 'swim',      sizeRange: [100, 170], speed: [10, 18], topRange: [20, 55] },
-    { id: 'sa10', name: '鲨鱼宝宝', img: 'sea animal 10.png', facing: 'left',  type: 'swim',      sizeRange: [120, 200], speed: [8, 15],  topRange: [5, 35] },
-    { id: 'sa11', name: '蝠鲼',     img: 'sea animal 11.png', facing: 'front', type: 'swim',      sizeRange: [140, 240], speed: [14, 24], topRange: [5, 30] },
-    { id: 'sa12', name: '海牛',     img: 'sea animal 12.png', facing: 'front', type: 'swim',      sizeRange: [120, 190], speed: [22, 36], topRange: [10, 40] },
-    { id: 'sa13', name: '鹦鹉鱼',   img: 'sea animal 13.png', facing: 'left',  type: 'swim',      sizeRange: [85, 150],  speed: [12, 20], topRange: [15, 50] },
-    { id: 'sa14', name: '狮子鱼',   img: 'sea animal 14.png', facing: 'left',  type: 'swim',      sizeRange: [95, 155],  speed: [16, 26], topRange: [15, 50] },
-    { id: 'sa15', name: '翻车鱼',   img: 'sea animal 15.png', facing: 'left',  type: 'swim',      sizeRange: [100, 170], speed: [20, 32], topRange: [10, 45] },
+    { id: 'sa1',  name: 'Octopus', img: 'sea animal 1.png',  facing: 'front', type: 'floor',     sizeRange: [120, 175], speed: [15, 25] },
+    { id: 'sa2',  name: 'Jellyfish', img: 'sea animal 2.png',  facing: 'front', type: 'jellyfish', sizeRange: [85, 140],  speed: [20, 35], topRange: [5, 45] },
+    { id: 'sa3',  name: 'Lanternfish', img: 'sea animal 3.png',  facing: 'left',  type: 'swim',      sizeRange: [80, 130],  speed: [14, 22], topRange: [15, 55] },
+    { id: 'sa4',  name: 'Starfish', img: 'sea animal 4.png',  facing: 'front', type: 'floor',     sizeRange: [65, 100],  speed: [30, 50] },
+    { id: 'sa5',  name: 'Hermit Crab', img: 'sea animal 5.png',  facing: 'left',  type: 'floor',     sizeRange: [75, 110],  speed: [20, 35] },
+    { id: 'sa6',  name: 'Crab', img: 'sea animal 6.png',  facing: 'front', type: 'floor',     sizeRange: [85, 120],  speed: [18, 30] },
+    { id: 'sa7',  name: 'Pufferfish', img: 'sea animal 7.png',  facing: 'front', type: 'swim',      sizeRange: [80, 130],  speed: [20, 32], topRange: [12, 50] },
+    { id: 'sa8',  name: 'Sea Urchin', img: 'sea animal 8.png',  facing: 'front', type: 'floor',     sizeRange: [55, 85],   speed: [35, 55] },
+    { id: 'sa9',  name: 'Electric Eel', img: 'sea animal 9.png',  facing: 'left',  type: 'swim',      sizeRange: [100, 170], speed: [10, 18], topRange: [20, 55] },
+    { id: 'sa10', name: 'Baby Shark', img: 'sea animal 10.png', facing: 'left',  type: 'swim',      sizeRange: [120, 200], speed: [8, 15],  topRange: [5, 35] },
+    { id: 'sa11', name: 'Manta Ray', img: 'sea animal 11.png', facing: 'front', type: 'swim',      sizeRange: [140, 240], speed: [14, 24], topRange: [5, 30] },
+    { id: 'sa12', name: 'Manatee', img: 'sea animal 12.png', facing: 'front', type: 'swim',      sizeRange: [120, 190], speed: [22, 36], topRange: [10, 40] },
+    { id: 'sa13', name: 'Parrotfish', img: 'sea animal 13.png', facing: 'left',  type: 'swim',      sizeRange: [85, 150],  speed: [12, 20], topRange: [15, 50] },
+    { id: 'sa14', name: 'Lionfish', img: 'sea animal 14.png', facing: 'left',  type: 'swim',      sizeRange: [95, 155],  speed: [16, 26], topRange: [15, 50] },
+    { id: 'sa15', name: 'Sunfish', img: 'sea animal 15.png', facing: 'left',  type: 'swim',      sizeRange: [100, 170], speed: [20, 32], topRange: [10, 45] },
     // Keep old favorites
-    { id: 'mermaid', name: '美人鱼', img: 'mermaid.png',       facing: 'right', type: 'floor',     sizeRange: [280, 360], speed: [16, 28] },
-    { id: 'whale',   name: '鲸鱼',  img: 'whale.png',         facing: 'right', type: 'swim',      sizeRange: [220, 350], speed: [25, 38], topRange: [3, 18] },
-    { id: 'seahorse1', name: '橙色海马', img: 'seahorse1.png', facing: 'left',  type: 'seahorse',  sizeRange: [55, 90],   speed: [25, 40], topRange: [15, 50] },
-    { id: 'seahorse2', name: '蓝色海马', img: 'seahorse2.png', facing: 'left',  type: 'seahorse',  sizeRange: [50, 85],   speed: [28, 42], topRange: [20, 55] },
+    { id: 'mermaid', name: 'Mermaid', img: 'mermaid.png',       facing: 'right', type: 'floor',     sizeRange: [280, 360], speed: [16, 28] },
+    { id: 'whale',   name: 'Whale', img: 'whale.png',         facing: 'right', type: 'swim',      sizeRange: [220, 350], speed: [25, 38], topRange: [3, 18] },
+    { id: 'seahorse1', name: 'Orange Seahorse', img: 'seahorse1.png', facing: 'left',  type: 'seahorse',  sizeRange: [55, 90],   speed: [25, 40], topRange: [15, 50] },
+    { id: 'seahorse2', name: 'Blue Seahorse', img: 'seahorse2.png', facing: 'left',  type: 'seahorse',  sizeRange: [50, 85],   speed: [28, 42], topRange: [20, 55] },
     // Magic Animals - legendary floor creatures, same range as mermaid
-    { id: 'ma1', name: '猫头鹰鱼', img: 'Magic animal 1.png', facing: 'right', type: 'floor', sizeRange: [196, 252], speed: [18, 30] },
-    { id: 'ma2', name: '水晶龙',   img: 'Magic animal 2.png', facing: 'left',  type: 'floor', sizeRange: [196, 252], speed: [20, 32] },
-    { id: 'ma3', name: '珊瑚精灵', img: 'Magic animal 3.png', facing: 'front', type: 'floor', sizeRange: [196, 252], speed: [18, 28] },
-    { id: 'ma4', name: '宝石鱿鱼', img: 'Magic animal 4.png', facing: 'front', type: 'floor', sizeRange: [196, 252], speed: [20, 30] },
-    { id: 'ma5', name: '珍珠水母', img: 'Magic animal 5.png', facing: 'front', type: 'floor', sizeRange: [196, 252], speed: [18, 28] },
-    { id: 'ma6', name: '月光水母', img: 'Magic animal 6.png', facing: 'front', type: 'floor', sizeRange: [196, 252], speed: [18, 28] },
-    { id: 'ma7', name: '星辰海龙', img: 'Magic animal 7.png', facing: 'left',  type: 'floor', sizeRange: [196, 252], speed: [20, 32] },
-    { id: 'ma8', name: '魔法鱿鱼', img: 'Magic animal 8.png', facing: 'front', type: 'floor', sizeRange: [196, 252], speed: [20, 30] },
+    { id: 'ma1', name: 'Owl Fish', img: 'Magic animal 1.png', facing: 'right', type: 'floor', sizeRange: [196, 252], speed: [18, 30] },
+    { id: 'ma2', name: 'Crystal Dragon', img: 'Magic animal 2.png', facing: 'left',  type: 'floor', sizeRange: [196, 252], speed: [20, 32] },
+    { id: 'ma3', name: 'Coral Sprite', img: 'Magic animal 3.png', facing: 'front', type: 'floor', sizeRange: [196, 252], speed: [18, 28] },
+    { id: 'ma4', name: 'Gem Squid', img: 'Magic animal 4.png', facing: 'front', type: 'floor', sizeRange: [196, 252], speed: [20, 30] },
+    { id: 'ma5', name: 'Pearl Jellyfish', img: 'Magic animal 5.png', facing: 'front', type: 'floor', sizeRange: [196, 252], speed: [18, 28] },
+    { id: 'ma6', name: 'Moonlight Jellyfish', img: 'Magic animal 6.png', facing: 'front', type: 'floor', sizeRange: [196, 252], speed: [18, 28] },
+    { id: 'ma7', name: 'Starry Sea Dragon', img: 'Magic animal 7.png', facing: 'left',  type: 'floor', sizeRange: [196, 252], speed: [20, 32] },
+    { id: 'ma8', name: 'Magic Squid', img: 'Magic animal 8.png', facing: 'front', type: 'floor', sizeRange: [196, 252], speed: [20, 30] },
 ];
 
 // Treasury items (30 from cut sheets)
 const SEA_TREASURES = [
     // Set 1
-    { id: 'ts1_1',  name: '彩虹珍珠球',   img: 'treasures/彩虹珍珠球.png' },
-    { id: 'ts1_2',  name: '星标船舵',     img: 'treasures/星标船舵.png' },
-    { id: 'ts1_3',  name: '海星漂流瓶',   img: 'treasures/海星漂流瓶.png' },
-    { id: 'ts1_4',  name: '皮革望远镜',   img: 'treasures/皮革望远镜.png' },
-    { id: 'ts1_5',  name: '粉金海螺',     img: 'treasures/粉金海螺.png' },
-    { id: 'ts1_6',  name: '五彩水晶',     img: 'treasures/五彩水晶.png' },
-    { id: 'ts1_7',  name: '海星金袋',     img: 'treasures/海星金袋.png' },
-    { id: 'ts1_8',  name: '紫贝珠宝箱',   img: 'treasures/紫贝珠宝箱.png' },
-    { id: 'ts1_9',  name: '贝壳钥匙',     img: 'treasures/贝壳钥匙.png' },
-    { id: 'ts1_10', name: '蓝金海星勋章',  img: 'treasures/蓝金海星勋章.png' },
+    { id: 'ts1_1',  name: 'Rainbow Pearl Orb', img: 'treasures/彩虹珍珠球.png' },
+    { id: 'ts1_2',  name: 'Starry Ship Wheel', img: 'treasures/星标船舵.png' },
+    { id: 'ts1_3',  name: 'Starfish Message Bottle', img: 'treasures/海星漂流瓶.png' },
+    { id: 'ts1_4',  name: 'Leather Spyglass', img: 'treasures/皮革望远镜.png' },
+    { id: 'ts1_5',  name: 'Pink Gold Conch', img: 'treasures/粉金海螺.png' },
+    { id: 'ts1_6',  name: 'Rainbow Crystal', img: 'treasures/五彩水晶.png' },
+    { id: 'ts1_7',  name: 'Starfish Gold Pouch', img: 'treasures/海星金袋.png' },
+    { id: 'ts1_8',  name: 'Purple Shell Jewel Box', img: 'treasures/紫贝珠宝箱.png' },
+    { id: 'ts1_9',  name: 'Shell Key', img: 'treasures/贝壳钥匙.png' },
+    { id: 'ts1_10', name: 'Blue Gold Star Medal', img: 'treasures/蓝金海星勋章.png' },
     // Set 2
-    { id: 'ts2_1',  name: '珊瑚水晶球',   img: 'treasures/珊瑚水晶球.png' },
-    { id: 'ts2_2',  name: '老船舵',       img: 'treasures/老船舵.png' },
-    { id: 'ts2_3',  name: '红绳漂流瓶',   img: 'treasures/红绳漂流瓶.png' },
-    { id: 'ts2_4',  name: '海星望远镜',   img: 'treasures/海星望远镜.png' },
-    { id: 'ts2_5',  name: '金边粉海螺',   img: 'treasures/金边粉海螺.png' },
-    { id: 'ts2_6',  name: '紫水晶',       img: 'treasures/紫水晶.png' },
-    { id: 'ts2_7',  name: '蓝布金袋',     img: 'treasures/蓝布金袋.png' },
-    { id: 'ts2_8',  name: '船锚钥匙',     img: 'treasures/船锚钥匙.png' },
-    { id: 'ts2_9',  name: '宝石海星勋章',  img: 'treasures/宝石海星勋章.png' },
-    { id: 'ts2_10', name: '粉贝珠宝箱',   img: 'treasures/粉贝珠宝箱.png' },
+    { id: 'ts2_1',  name: 'Coral Crystal Ball', img: 'treasures/珊瑚水晶球.png' },
+    { id: 'ts2_2',  name: 'Old Ship Wheel', img: 'treasures/老船舵.png' },
+    { id: 'ts2_3',  name: 'Red Rope Message Bottle', img: 'treasures/红绳漂流瓶.png' },
+    { id: 'ts2_4',  name: 'Starfish Spyglass', img: 'treasures/海星望远镜.png' },
+    { id: 'ts2_5',  name: 'Gold Rim Pink Conch', img: 'treasures/金边粉海螺.png' },
+    { id: 'ts2_6',  name: 'Amethyst', img: 'treasures/紫水晶.png' },
+    { id: 'ts2_7',  name: 'Blue Cloth Gold Pouch', img: 'treasures/蓝布金袋.png' },
+    { id: 'ts2_8',  name: 'Anchor Key', img: 'treasures/船锚钥匙.png' },
+    { id: 'ts2_9',  name: 'Gem Star Medal', img: 'treasures/宝石海星勋章.png' },
+    { id: 'ts2_10', name: 'Pink Shell Jewel Box', img: 'treasures/粉贝珠宝箱.png' },
     // Set 3
-    { id: 'ts3_1',  name: '沉船舵轮',     img: 'treasures/沉船舵轮.png' },
-    { id: 'ts3_2',  name: '珊瑚漂流瓶',   img: 'treasures/珊瑚漂流瓶.png' },
-    { id: 'ts3_3',  name: '金光水晶球',   img: 'treasures/金光水晶球.png' },
-    { id: 'ts3_4',  name: '蓝紫水晶',     img: 'treasures/蓝紫水晶.png' },
-    { id: 'ts3_5',  name: '船锚金袋',     img: 'treasures/船锚金袋.png' },
-    { id: 'ts3_6',  name: '黑金望远镜',   img: 'treasures/黑金望远镜.png' },
-    { id: 'ts3_7',  name: '紫珠海螺',     img: 'treasures/紫珠海螺.png' },
-    { id: 'ts3_8',  name: '海星勋章',     img: 'treasures/海星勋章.png' },
-    { id: 'ts3_9',  name: '紫贝宝盒',     img: 'treasures/紫贝宝盒.png' },
-    { id: 'ts3_10', name: '船锚古钥匙',   img: 'treasures/船锚古钥匙.png' },
+    { id: 'ts3_1',  name: 'Sunken Ship Wheel', img: 'treasures/沉船舵轮.png' },
+    { id: 'ts3_2',  name: 'Coral Message Bottle', img: 'treasures/珊瑚漂流瓶.png' },
+    { id: 'ts3_3',  name: 'Golden Crystal Ball', img: 'treasures/金光水晶球.png' },
+    { id: 'ts3_4',  name: 'Blue Violet Crystal', img: 'treasures/蓝紫水晶.png' },
+    { id: 'ts3_5',  name: 'Anchor Gold Pouch', img: 'treasures/船锚金袋.png' },
+    { id: 'ts3_6',  name: 'Black Gold Spyglass', img: 'treasures/黑金望远镜.png' },
+    { id: 'ts3_7',  name: 'Purple Pearl Conch', img: 'treasures/紫珠海螺.png' },
+    { id: 'ts3_8',  name: 'Starfish Medal', img: 'treasures/海星勋章.png' },
+    { id: 'ts3_9',  name: 'Purple Shell Box', img: 'treasures/紫贝宝盒.png' },
+    { id: 'ts3_10', name: 'Ancient Anchor Key', img: 'treasures/船锚古钥匙.png' },
 ];
 
 // For reward collection: swimming animals + treasures are all collectible
@@ -1411,7 +1474,7 @@ function onQuestionTimeout() {
     if (seaQuestion) markSeaOption(seaQuestion.answer, 'correct'); // 揭示正确答案
     seaWrong++;
     document.getElementById('sea-wrong').textContent = seaWrong;
-    showFeedback('\u231b 时间到!');
+    showFeedback('\u231b Time\'s up!');
     // Show lost treasure AFTER the timeout feedback fades (1.5s)
     setTimeout(() => loseTreasurePenalty(), 1500);
     setTimeout(() => nextSeaQuestion(), 4000);
@@ -1436,7 +1499,7 @@ function checkSeaAnswer(picked) {
         seaCorrect++;
         bumpDailySolved();
         document.getElementById('sea-correct').textContent = seaCorrect;
-        showFeedback('\u2b50 正确!');
+        showFeedback('\u2b50 Correct!');
         setTimeout(() => enablePickMode(), 800);
     } else {
         markSeaOption(picked, 'wrong');
@@ -1612,7 +1675,7 @@ function onPickItem(e) {
     treasureCollection.push({ id: itemId, name: itemName, img: itemImg, time: Date.now() });
     saveTreasures();
     updateTreasureBoxUI();
-    showFeedback('\ud83c\udf81 ' + itemName + ' 收入囊中!');
+    showFeedback('\ud83c\udf81 ' + itemName + ' collected!');
 
     // After collecting, end pick mode and go to next question
     disablePickMode();
@@ -1622,7 +1685,7 @@ function onPickItem(e) {
 function showLostItemAnimation(item) {
     const el = document.createElement('div');
     el.className = 'lost-item-big';
-    el.innerHTML = `<img src="${IMG}${item.img}"><div class="lost-text">&#128546; 丢失了 ${item.name}!</div>`;
+    el.innerHTML = `<img src="${IMG}${item.img}"><div class="lost-text">&#128546; You lost ${item.name}!</div>`;
     document.body.appendChild(el);
     setTimeout(() => el.remove(), 2600);
 }
@@ -1812,7 +1875,7 @@ const STOCKS = [
     { symbol: 'QQQ',  name: 'QQQ ETF', emoji: '&#128200;' },
     { symbol: 'SPCX', name: 'SpaceX', emoji: '&#128640;' },
     { symbol: 'MCD',  name: "McDonald's", emoji: '&#127828;' },
-    { symbol: 'KTEC', name: '恒生科技ETF', emoji: '&#127961;' }, // 美股上市的恒生科技指数 ETF (KraneShares)
+    { symbol: 'KTEC', name: 'Hang Seng Tech ETF', emoji: '&#127961;' }, // 美股上市的恒生科技指数 ETF (KraneShares)
 ];
 let stockPrices = {}; // { TSLA: 180.5, ... }
 let stockPricesLoading = false;
@@ -1931,10 +1994,10 @@ function renderStockPriceStatus() {
         if (!priceEl) return;
         const status = stockStatus[s.symbol];
         if (status === 'loading') {
-            priceEl.innerHTML = '<span style="color:rgba(255,255,255,0.5)">&#8987; 刷新中...</span>';
+            priceEl.innerHTML = '<span style="color:rgba(255,255,255,0.5)">&#8987; Refreshing...</span>';
             priceEl.style.animation = 'twinkle 1s ease-in-out infinite';
         } else if (status === 'failed') {
-            priceEl.innerHTML = `<span style="color:#ff6b6b">&#9888; 刷新失败</span> <span style="color:rgba(255,255,255,0.4);font-size:0.75rem">($${stockPrices[s.symbol] || '?'})</span>`;
+            priceEl.innerHTML = `<span style="color:#ff6b6b">&#9888; Refresh failed</span> <span style="color:rgba(255,255,255,0.4);font-size:0.75rem">($${stockPrices[s.symbol] || '?'})</span>`;
             priceEl.style.animation = '';
         } else {
             priceEl.innerHTML = `$${stockPrices[s.symbol]}`;
@@ -1946,13 +2009,13 @@ function renderStockPriceStatus() {
     const timeEl = document.getElementById('stockUpdateTime');
     if (timeEl) {
         const lastTime = parseInt(localStorage.getItem('seaStockPricesTime') || '0');
-        timeEl.textContent = lastTime ? '更新: ' + new Date(lastTime).toLocaleTimeString() : '';
+        timeEl.textContent = lastTime ? 'Updated: ' + new Date(lastTime).toLocaleTimeString('en-US') : '';
     }
 }
 
 // 迁移: 早期短暂上线的 HSTECH.HK(指数点位, Alpha Vantage 无数据) 改为 KTEC。
 // 未平仓/历史持仓按两者价格比例换算买入价, 保持投入金额与当时盈亏不变。
-(function migrateHstech() {
+function migrateHstech() {
     const RATIO = 11.48 / 4108.24;
     let changed = false;
     [investments, investHistory].forEach(list => (list || []).forEach(h => {
@@ -1972,7 +2035,8 @@ function renderStockPriceStatus() {
         localStorage.setItem('seaInvestments', JSON.stringify(investments));
         localStorage.setItem('seaInvestHistory', JSON.stringify(investHistory));
     }
-})();
+}
+migrateHstech();
 
 // Load cached prices on startup
 try {
@@ -2045,8 +2109,8 @@ function renderTreasureGrid() {
     container.innerHTML = '';
 
     if (treasureCollection.length === 0) {
-        subtitle.textContent = '你还没有收集任何宝藏哦';
-        container.innerHTML = '<div class="treasure-empty">快去答题赢取宝藏吧! &#127754;</div>';
+        subtitle.textContent = 'You have not collected any treasures yet';
+        container.innerHTML = '<div class="treasure-empty">Answer questions to win treasures! &#127754;</div>';
         return;
     }
 
@@ -2056,7 +2120,7 @@ function renderTreasureGrid() {
         if (!grouped[item.id]) grouped[item.id] = { ...item, count: 0 };
         grouped[item.id].count++;
     });
-    subtitle.textContent = `共 ${treasureCollection.length} 件宝藏 | 可投资: $${Math.floor(cashBalance)}`;
+    subtitle.textContent = `Treasures: ${treasureCollection.length} | To invest: $${Math.floor(cashBalance)}`;
 
     function renderSection(title, emoji, slotOrder, colorAccent) {
         const items = slotOrder.filter(id => grouped[id]);
@@ -2083,7 +2147,7 @@ function renderTreasureGrid() {
                 <div class="item-label">${item.name}</div>
                 <div class="item-count">x${item.count}</div>
                 <div class="item-price">$${price}</div>
-                <button class="sell-btn" onclick="sellItem('${item.id}', ${price})">卖出 1 个</button>
+                <button class="sell-btn" onclick="sellItem('${item.id}', ${price})">Sell 1</button>
             `;
             grid.appendChild(cell);
         });
@@ -2092,13 +2156,13 @@ function renderTreasureGrid() {
     }
 
     renderSection('Magic Animal', '\u2728', SLOT_ORDER_MAGIC, '#E040FB');
-    renderSection('宝藏', '\u{1F48E}', SLOT_ORDER_TREASURE, '#FFD700');
-    renderSection('海洋动物', '\u{1F41F}', SLOT_ORDER_ANIMAL, '#4FC3F7');
+    renderSection('Treasures', '\u{1F48E}', SLOT_ORDER_TREASURE, '#FFD700');
+    renderSection('Sea Animals', '\u{1F41F}', SLOT_ORDER_ANIMAL, '#4FC3F7');
 
     // 兜底: 不在任何白名单里的 id (如旧版物品) 也要显示, 避免"隐形宝物"
     const knownIds = new Set([...SLOT_ORDER_MAGIC, ...SLOT_ORDER_TREASURE, ...SLOT_ORDER_ANIMAL]);
     const leftoverIds = Object.keys(grouped).filter(id => !knownIds.has(id));
-    renderSection('其他', '\u{1F4E6}', leftoverIds, '#B0BEC5');
+    renderSection('Other', '\u{1F4E6}', leftoverIds, '#B0BEC5');
 }
 
 function sellItem(itemId, price) {
@@ -2110,7 +2174,7 @@ function sellItem(itemId, price) {
     updateTreasureBoxUI();
     updateCashDisplay();
     renderTreasureGrid();
-    showFeedback('$' + price + ' 到账!');
+    showFeedback('$' + price + ' received!');
 }
 
 // ===== INVEST TAB =====
@@ -2167,7 +2231,7 @@ function updateCashDisplay() {
     if (tpEl) {
         const pnl = Math.floor(f.totalPnl);
         const sign = pnl >= 0 ? '+' : '';
-        tpEl.textContent = '\ud83d\udcc8 总P&L: ' + sign + '$' + pnl;
+        tpEl.textContent = '\ud83d\udcc8 Total P&L: ' + sign + '$' + pnl;
         tpEl.style.color = pnl >= 0 ? '#4CAF50' : '#ff6b6b';
     }
     if (cd) cd.textContent = Math.floor(cashBalance);
@@ -2179,12 +2243,12 @@ function renderInvestTab() {
     container.innerHTML = '';
 
     // Savings section
-    let html = '<div style="margin-bottom:18px"><div style="color:#FFD700;font-weight:700;margin-bottom:8px">&#127970; 存款 (每日复利)</div>';
+    let html = '<div style="margin-bottom:18px"><div style="color:#FFD700;font-weight:700;margin-bottom:8px">&#127970; Savings (daily interest)</div>';
     html += `<div class="stock-card" style="flex-wrap:wrap">
-        <div class="stock-name">&#128176; 活期存款</div>
-        <div style="color:rgba(255,255,255,0.7);font-size:0.8rem">年利率 ${SAVINGS_RATE*100}% 日复利</div>
-        <input type="number" class="stock-input" id="savingsInput" min="1" step="1" placeholder="金额" oninput="updateSavingsPreview()">
-        <button class="stock-buy-btn" onclick="depositSavings()">存入</button>
+        <div class="stock-name">&#128176; Savings account</div>
+        <div style="color:rgba(255,255,255,0.7);font-size:0.8rem">${SAVINGS_RATE*100}% a year, added daily</div>
+        <input type="number" class="stock-input" id="savingsInput" min="1" step="1" placeholder="Amount" oninput="updateSavingsPreview()">
+        <button class="stock-buy-btn" onclick="depositSavings()">Deposit</button>
         <div id="savingsPreview" style="width:100%;color:#4CAF50;font-size:0.78rem;margin-top:6px;min-height:18px"></div>
     </div>`;
     const openSavings = investments.filter(i => i.type === 'savings' && !i.soldAt);
@@ -2194,10 +2258,10 @@ function renderInvestTab() {
             const interest = Math.floor(calcCompoundInterest(s.amount, days));
             const mtm = s.amount + interest;
             html += `<div class="holding-row">
-                <span>$${s.amount} 存入 ${new Date(s.buyTime).toLocaleDateString()}</span>
-                <span class="pnl-pos">市值 $${mtm} (+$${interest}, ${days}天)</span>
-                <input type="number" class="stock-input" id="partialW_${i}" min="1" max="${s.amount}" step="1" placeholder="取出额" style="width:65px;font-size:0.75rem">
-                <button class="sell-btn" onclick="withdrawSavings(${i})">取出</button>
+                <span>$${s.amount} deposited ${new Date(s.buyTime).toLocaleDateString('en-US')}</span>
+                <span class="pnl-pos">Value $${mtm} (+$${interest}, ${days}d)</span>
+                <input type="number" class="stock-input" id="partialW_${i}" min="1" max="${s.amount}" step="1" placeholder="$" style="width:65px;font-size:0.75rem">
+                <button class="sell-btn" onclick="withdrawSavings(${i})">Take out</button>
             </div>`;
         });
     }
@@ -2205,8 +2269,8 @@ function renderInvestTab() {
 
     // Stocks section
     html += `<div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
-        <span style="color:#FFD700;font-weight:700">&#128200; 股票投资</span>
-        <button onclick="refreshStockPrices()" style="padding:4px 12px;border:none;border-radius:8px;background:rgba(255,255,255,0.15);color:#FFD700;font-family:'Nunito',sans-serif;font-size:0.75rem;font-weight:700;cursor:pointer">&#128260; 刷新股价</button>
+        <span style="color:#FFD700;font-weight:700">&#128200; Stocks</span>
+        <button onclick="refreshStockPrices()" style="padding:4px 12px;border:none;border-radius:8px;background:rgba(255,255,255,0.15);color:#FFD700;font-family:'Nunito',sans-serif;font-size:0.75rem;font-weight:700;cursor:pointer">&#128260; Refresh prices</button>
         <span id="stockUpdateTime" style="color:rgba(255,255,255,0.4);font-size:0.7rem"></span>
     </div>`;
     STOCKS.forEach(stock => {
@@ -2214,7 +2278,7 @@ function renderInvestTab() {
             <div class="stock-name">${stock.emoji} ${stock.symbol}</div>
             <div class="stock-price" id="stockPriceVal_${stock.symbol}">$${stockPrices[stock.symbol] || '---'}</div>
             <input type="number" class="stock-input" id="buy_${stock.symbol}" min="1" step="1" placeholder="$">
-            <button class="stock-buy-btn" onclick="buyStock('${stock.symbol}')">买入</button>
+            <button class="stock-buy-btn" onclick="buyStock('${stock.symbol}')">Buy</button>
         </div>`;
         const holdings = investments.filter(i => i.type === 'stock' && i.symbol === stock.symbol && !i.soldAt);
         holdings.forEach((h, i) => {
@@ -2223,9 +2287,9 @@ function renderInvestTab() {
             const pnlClass = pnl >= 0 ? 'pnl-pos' : 'pnl-neg';
             const pnlSign = pnl >= 0 ? '+' : '';
             html += `<div class="holding-row">
-                <span>$${h.amount} @ $${h.buyPrice} → 市值 $${mtm}</span>
+                <span>$${h.amount} @ $${h.buyPrice} → Value $${mtm}</span>
                 <span class="${pnlClass}">${pnlSign}$${pnl}</span>
-                <button class="sell-btn" onclick="sellStock('${stock.symbol}', ${i})">卖出</button>
+                <button class="sell-btn" onclick="sellStock('${stock.symbol}', ${i})">Sell</button>
             </div>`;
         });
     });
@@ -2234,15 +2298,15 @@ function renderInvestTab() {
 
     // History
     if (investHistory.length > 0) {
-        html += '<div style="color:#FFD700;font-weight:700;margin:15px 0 8px">&#128203; 投资明细</div>';
+        html += '<div style="color:#FFD700;font-weight:700;margin:15px 0 8px">&#128203; Investment history</div>';
         html += '<div style="max-height:150px;overflow-y:auto">';
         [...investHistory].reverse().slice(0, 20).forEach(h => {
             const pnl = h.pnl || 0;
             const pnlClass = pnl >= 0 ? 'pnl-pos' : 'pnl-neg';
             const pnlSign = pnl >= 0 ? '+' : '';
             html += `<div class="holding-row" style="font-size:0.75rem">
-                <span>${h.symbol || '存款'} $${h.amount}${h.sellAmount ? ' → $'+h.sellAmount : ''}</span>
-                <span>${new Date(h.buyTime).toLocaleDateString()} → ${h.soldAt ? new Date(h.soldAt).toLocaleDateString() : '-'}</span>
+                <span>${historyLabel(h)} $${h.amount}${h.sellAmount ? ' → $'+h.sellAmount : ''}</span>
+                <span>${new Date(h.buyTime).toLocaleDateString('en-US')} → ${h.soldAt ? new Date(h.soldAt).toLocaleDateString('en-US') : '-'}</span>
                 <span class="${pnlClass}">P&L: ${pnlSign}$${pnl}</span>
             </div>`;
         });
@@ -2263,29 +2327,33 @@ function updateSavingsPreview() {
     const weekly = Math.round(calcCompoundInterest(amount, 7) * 100) / 100;
     const monthly = Math.round(calcCompoundInterest(amount, 30) * 100) / 100;
     const yearly = Math.round(calcCompoundInterest(amount, 365) * 100) / 100;
-    preview.innerHTML = `&#128200; 每周赚 $${weekly} | 每月 $${monthly} | 每年 $${yearly}`;
+    preview.innerHTML = `&#128200; Earns $${weekly} a week | $${monthly} a month | $${yearly} a year`;
 }
 
+// 旧存档的投资明细用中文标记存款
+const LEGACY_HISTORY_LABELS = { '存款': 'Savings', '存款(部分取出)': 'Savings (partial)' };
+function historyLabel(h) { return LEGACY_HISTORY_LABELS[h.symbol] || h.symbol || 'Savings'; }
+
 async function refreshStockPrices() {
-    if (stockPricesLoading) { showFeedback('正在刷新中...'); return; }
+    if (stockPricesLoading) { showFeedback('Already refreshing...'); return; }
     await fetchStockPrices();
     renderInvestTab();
     const failedCount = STOCKS.filter(s => stockStatus[s.symbol] === 'failed').length;
     if (failedCount === 0) {
-        showFeedback('全部股价已更新!');
+        showFeedback('All prices updated!');
     } else {
-        showFeedback(failedCount + ' 只股票刷新失败');
+        showFeedback('Stocks not refreshed: ' + failedCount);
     }
 }
 
 function depositSavings() {
     const input = document.getElementById('savingsInput');
     const amount = Math.floor(parseFloat(input.value));
-    if (!amount || amount <= 0 || amount > cashBalance) { showFeedback('余额不足!'); return; }
+    if (!amount || amount <= 0 || amount > cashBalance) { showFeedback('Not enough money!'); return; }
     cashBalance -= amount;
     investments.push({ type: 'savings', amount, buyTime: Date.now() });
     saveAll(); updateCashDisplay(); renderInvestTab();
-    showFeedback('存入 $' + amount);
+    showFeedback('Deposited $' + amount);
 }
 
 // Partial or full withdrawal from savings
@@ -2314,12 +2382,12 @@ function withdrawSavings(holdingIndex) {
         s.soldAt = Date.now();
         s.sellAmount = payout;
         s.pnl = realizedInterest;
-        investHistory.push({ ...s, symbol: '存款' });
+        investHistory.push({ ...s, symbol: 'Savings' });
     } else {
         // Partial withdrawal - reduce principal, log the partial
         s.amount -= withdrawPrincipal;
         investHistory.push({
-            type: 'savings', symbol: '存款(部分取出)',
+            type: 'savings', symbol: 'Savings (partial)',
             amount: withdrawPrincipal, buyTime: s.buyTime,
             soldAt: Date.now(), sellAmount: payout, pnl: realizedInterest
         });
@@ -2329,20 +2397,20 @@ function withdrawSavings(holdingIndex) {
     cashBalance += withdrawPrincipal;
     withdrawable += realizedInterest;
     saveAll(); updateCashDisplay(); renderInvestTab();
-    showFeedback('取出 本金$' + withdrawPrincipal + ' + 利息$' + realizedInterest);
+    showFeedback('Took out $' + withdrawPrincipal + ' + $' + realizedInterest + ' interest');
 }
 
 async function buyStock(symbol) {
     const input = document.getElementById('buy_' + symbol);
     const amount = Math.floor(parseFloat(input.value));
-    if (!amount || amount <= 0 || amount > cashBalance) { showFeedback('余额不足!'); return; }
+    if (!amount || amount <= 0 || amount > cashBalance) { showFeedback('Not enough money!'); return; }
     await fetchStockPrices();
     const price = stockPrices[symbol];
-    if (!price) { showFeedback('无法获取股价'); return; }
+    if (!price) { showFeedback('Could not get the price'); return; }
     cashBalance -= amount;
     investments.push({ type: 'stock', symbol, amount, buyPrice: price, buyTime: Date.now() });
     saveAll(); updateCashDisplay(); renderInvestTab();
-    showFeedback('买入 ' + symbol + ' $' + amount + ' @ $' + price);
+    showFeedback('Bought ' + symbol + ' $' + amount + ' @ $' + price);
 }
 
 async function sellStock(symbol, holdingIndex) {
@@ -2362,7 +2430,7 @@ async function sellStock(symbol, holdingIndex) {
     investHistory.push({ ...h });
     saveAll(); updateCashDisplay(); renderInvestTab();
     const sign = pnl >= 0 ? '+' : '';
-    showFeedback(symbol + ' 卖出 $' + sellAmount + ' (P&L: ' + sign + '$' + pnl + ')');
+    showFeedback('Sold ' + symbol + ' $' + sellAmount + ' (P&L: ' + sign + '$' + pnl + ')');
 }
 
 function showWithdraw() {
@@ -2373,12 +2441,12 @@ function showWithdraw() {
 
 function confirmWithdraw() {
     const amount = Math.floor(parseFloat(document.getElementById('withdrawInput').value));
-    if (!amount || amount <= 0 || amount > withdrawable) { showFeedback('金额无效!'); return; }
+    if (!amount || amount <= 0 || amount > withdrawable) { showFeedback('Invalid amount!'); return; }
     withdrawable -= amount;
     totalWithdrawn += amount;   // 进入钱包
     saveAll(); updateCashDisplay(); renderWallet();
     document.getElementById('withdrawDialog').classList.remove('show');
-    showFeedback('提现 $' + amount + ' 已进钱包!');
+    showFeedback('$' + amount + ' moved to your wallet!');
 }
 
 // ===== 我的钱包 =====
@@ -2403,9 +2471,9 @@ function toggleFlowType() {
     if (t) t.dataset.type = walletFlowType;
     const inc = walletFlowType === 'income';
     const title = document.getElementById('walletEntryTitle');
-    if (title) title.innerHTML = '&#9999;&#65039; 记一笔' + (inc ? '收入' : '支出');
+    if (title) title.innerHTML = '&#9999;&#65039; ' + (inc ? 'Add income' : 'Add an expense');
     const nameEl = document.getElementById('expenseName');
-    if (nameEl) nameEl.placeholder = inc ? '收入项目 (如: 帮忙做家务)' : '支出项目 (如: 买零食)';
+    if (nameEl) nameEl.placeholder = 'Item';
 }
 function fmtMD(t) { const d = new Date(t); return String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); }
 function escHtml(s) { return String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])); }
@@ -2421,14 +2489,14 @@ function renderWallet() {
     const box = document.getElementById('walletExpenseList');
     if (!box) return;
     if (!expenses.length) {
-        box.innerHTML = '<div style="padding:16px;color:rgba(255,255,255,0.4);text-align:center;font-size:0.9rem">还没有收支记录</div>';
+        box.innerHTML = '<div style="padding:16px;color:rgba(255,255,255,0.4);text-align:center;font-size:0.9rem">No records yet</div>';
         return;
     }
     const recent = expenses.slice().sort((a, b) => (b.time || 0) - (a.time || 0)).slice(0, 7);
     box.innerHTML = recent.map(e =>
         '<div style="display:flex;align-items:center;padding:10px 14px;border-bottom:1px solid rgba(255,255,255,0.07);font-size:0.92rem">' +
         '<span style="color:rgba(255,255,255,0.5);width:62px">' + (e.time ? fmtMD(e.time) : '') + '</span>' +
-        '<span style="color:#fff;flex:1;text-align:left">' + escHtml(e.name || (isIncome(e) ? '收入' : '支出')) + '</span>' +
+        '<span style="color:#fff;flex:1;text-align:left">' + escHtml(e.name || (isIncome(e) ? 'Income' : 'Expense')) + '</span>' +
         (isIncome(e)
             ? '<span style="color:#69f0ae;font-weight:900">+$' + e.amount + '</span></div>'
             : '<span style="color:#ff8a8a;font-weight:900">-$' + e.amount + '</span></div>')
@@ -2441,24 +2509,24 @@ function addExpense() {
     const name = (nameEl.value || '').trim();
     const amount = Math.floor(parseFloat(amtEl.value));
     const inc = walletFlowType === 'income';
-    if (!name) { showFeedback(inc ? '请填写收入项目!' : '请填写支出项目!'); return; }
-    if (!amount || amount <= 0) { showFeedback('金额无效!'); return; }
-    if (!inc && amount > walletBalance()) { showFeedback('钱包余额不足!'); return; }
+    if (!name) { showFeedback(inc ? 'Please enter what you earned!' : 'Please enter what you bought!'); return; }
+    if (!amount || amount <= 0) { showFeedback('Invalid amount!'); return; }
+    if (!inc && amount > walletBalance()) { showFeedback('Not enough money in your wallet!'); return; }
     const rec = { name: name, amount: amount, time: Date.now() };
     if (inc) rec.type = 'income';
     expenses.push(rec);
     saveFinance();
     nameEl.value = ''; amtEl.value = '';
     renderWallet();
-    showFeedback('已记录: ' + name + (inc ? ' +$' : ' -$') + amount);
+    showFeedback('Added: ' + name + (inc ? ' +$' : ' -$') + amount);
 }
 
 function exportExpensesCSV() {
-    if (!expenses.length) { showFeedback('暂无收支可导出'); return; }
-    const rows = [['日期时间', '类型', '项目', '金额']];
+    if (!expenses.length) { showFeedback('No records to export'); return; }
+    const rows = [['Date and time', 'Type', 'Item', 'Amount']];
     expenses.slice().sort((a, b) => (a.time || 0) - (b.time || 0)).forEach(e => {
         const d = e.time ? new Date(e.time).toISOString().slice(0, 19).replace('T', ' ') : '';
-        rows.push([d, isIncome(e) ? '收入' : '支出', e.name || '', isIncome(e) ? e.amount : -e.amount]);
+        rows.push([d, isIncome(e) ? 'Income' : 'Expense', e.name || '', isIncome(e) ? e.amount : -e.amount]);
     });
     // 加 BOM 让 Excel 正确识别中文
     const csv = '﻿' + rows.map(r => r.map(c => '"' + String(c).replace(/"/g, '""') + '"').join(',')).join('\r\n');
@@ -2467,7 +2535,7 @@ function exportExpensesCSV() {
     const a = document.createElement('a');
     a.href = url; a.download = 'wallet_' + new Date().toISOString().slice(0, 10) + '.csv';
     a.click(); URL.revokeObjectURL(url);
-    showFeedback('收支明细已导出!');
+    showFeedback('Records exported!');
 }
 
 // ===== DAILY SETTLEMENT MODAL =====
@@ -2475,10 +2543,10 @@ function showSettlementModal(result) {
     const body = document.getElementById('settleModalBody');
     let html = '';
     if (result.daysSettled > 1) {
-        html += '<div style="color:#FFD700;margin-bottom:10px">检测到上次结算距今 ' + result.daysSettled + ' 天,以下为累计扣减:</div>';
+        html += '<div style="color:#FFD700;margin-bottom:10px">Days since your last report: ' + result.daysSettled + '. Total losses:</div>';
     }
     if (result.lost.length > 0) {
-        html += '<div style="color:#ff6b6b;font-weight:700;margin-bottom:8px">&#128302; 因未达每日 ' + DAILY_GOAL + ' 题目标,丢失了 ' + result.lost.length + ' 件宝物:</div>';
+        html += '<div style="color:#ff6b6b;font-weight:700;margin-bottom:8px">&#128302; Daily goal of ' + DAILY_GOAL + ' questions missed. Treasures lost: ' + result.lost.length + '</div>';
         html += '<div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px">';
         result.lost.forEach(t => {
             const imgSrc = t.img ? (IMG + t.img) : '';
@@ -2489,8 +2557,8 @@ function showSettlementModal(result) {
         html += '</div>';
     }
     if (result.cashLoss > 0) {
-        html += '<div style="color:#ffa500;font-weight:700;margin-bottom:6px">&#128201; 你的可投资金额减少了 $' + result.cashLoss + '</div>';
-        html += '<div style="color:rgba(255,255,255,0.6);font-size:0.85rem">($' + result.cashBefore + ' &rarr; $' + result.cashAfter + ',每日 0 点通缩 ' + Math.round(CASH_DEFLATION * 100) + '%)</div>';
+        html += '<div style="color:#ffa500;font-weight:700;margin-bottom:6px">&#128201; Your money to invest went down by $' + result.cashLoss + '</div>';
+        html += '<div style="color:rgba(255,255,255,0.6);font-size:0.85rem">($' + result.cashBefore + ' &rarr; $' + result.cashAfter + ', drops ' + Math.round(CASH_DEFLATION * 100) + '% every midnight)</div>';
     }
     if (!html) return;
     body.innerHTML = html;
@@ -2517,17 +2585,18 @@ function buildSaveObject() {
     };
 }
 function applySaveObject(data) {
-    if (data.treasures) { treasureCollection = data.treasures; saveTreasures(); }
+    if (data.treasures) { treasureCollection = data.treasures; localizeSavedItems(); saveTreasures(); }
     if (data.cash !== undefined) cashBalance = data.cash;
     if (data.withdrawable !== undefined) withdrawable = data.withdrawable;
     if (data.investments) investments = data.investments;
     if (data.investHistory) investHistory = data.investHistory;
     if (data.stockPrices) stockPrices = data.stockPrices;
     if (data.dailySolved !== undefined) dailySolved = data.dailySolved;
-    if (data.lastSettleDate) lastSettleDate = data.lastSettleDate;
+    if (data.lastSettleDate !== undefined) lastSettleDate = data.lastSettleDate;
     if (data.settleHistory) settleHistory = data.settleHistory;
     if (data.totalWithdrawn !== undefined) totalWithdrawn = data.totalWithdrawn;
     if (data.expenses) expenses = data.expenses;
+    migrateHstech();
     saveFinance();
     saveDaily();
     updateTreasureBoxUI();
@@ -2544,7 +2613,7 @@ function exportAllData() {
     a.download = `sea_treasure_${new Date().toISOString().slice(0,10)}.json`;
     a.click();
     URL.revokeObjectURL(url);
-    showFeedback('数据已导出!');
+    showFeedback('Data exported!');
 }
 
 function importAllData(event) {
@@ -2554,10 +2623,10 @@ function importAllData(event) {
     reader.onload = function(e) {
         try {
             applySaveObject(JSON.parse(e.target.result));
-            showFeedback('数据导入成功!');
+            showFeedback('Data imported!');
             scheduleCloudPush(); // 导入后同步到云端
         } catch(err) {
-            showFeedback('导入失败: 文件格式错误');
+            showFeedback('Import failed: invalid file');
         }
     };
     reader.readAsText(file);
@@ -2565,17 +2634,18 @@ function importAllData(event) {
 }
 
 // ===================================================================
-// ===== 云同步 (Supabase + 同步码) =====
-// 在两台设备输入同一个「同步码」, 存档即自动跟随。
+// ===== 云同步 (Supabase + 游戏 key) =====
+// 在两台设备输入同一个游戏 key, 存档即自动跟随。
 // 填写下面两个常量后生效 (Supabase → Project Settings → API):
 const SUPABASE_URL = 'https://vlfywndejftdhpmfljpb.supabase.co'; // Project URL (不带 /rest/v1/)
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZsZnl3bmRlamZ0ZGhwbWZsanBiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE4MzMzMTEsImV4cCI6MjA5NzQwOTMxMX0.NsYRmI24Lv_0lRlsqFh6-48RhwoPM_mwVOrD5JRTKOc'; // anon public key
-// 默认同步码: 内置后无需人工填写, 打开游戏即自动用它同步。所有设备共用同一份存档。
-// 想换成更私密的, 改这里即可 (Mac 和 iPad 会自动用同一个新值)。
-const DEFAULT_SYNC_CODE = 'vivien-sea-2026';
+const ACCOUNT_URL = SUPABASE_URL + '/functions/v1/account'; // 创建 key / 重发 key 的 Edge Function
+const KEY_PATTERN = /^[a-z0-9_-]{6,32}$/;
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 // ===================================================================
 
-let syncCode = localStorage.getItem('seaSyncCode') || DEFAULT_SYNC_CODE;
+const lastKey = localStorage.getItem('seaSyncCode') || ''; // 上次用的 key, 只用于预填和判断是否换了玩家
+let syncCode = '';   // 进入游戏后才赋值, 在此之前不会上传
 let seaSyncVersion = parseInt(localStorage.getItem('seaSyncVersion') || '0');
 let applyingCloud = false;   // 拉取应用云端数据时为 true, 防止回写造成循环
 let cloudPushTimer = null;
@@ -2589,6 +2659,16 @@ function sbHeaders(extra) {
         'Authorization': 'Bearer ' + SUPABASE_ANON_KEY,
         'Content-Type': 'application/json',
     }, extra || {});
+}
+
+async function sbRpc(name, args) {
+    const res = await fetch(SUPABASE_URL + '/rest/v1/rpc/' + name, {
+        method: 'POST',
+        headers: sbHeaders(),
+        body: JSON.stringify(args),
+    });
+    if (!res.ok) throw new Error(await res.text());
+    return res.json();
 }
 
 function setCloudStatus(text, color) {
@@ -2606,31 +2686,23 @@ function scheduleCloudPush() {
 }
 
 async function cloudPush() {
-    if (!cloudEnabled()) return;
+    if (!cloudEnabled()) return false;
     const payload = buildSaveObject();
     payload._v = seaSyncVersion;
     try {
-        setCloudStatus('☁️ 同步中...', '#FFD700');
-        const res = await fetch(SUPABASE_URL + '/rest/v1/game_saves', {
-            method: 'POST',
-            headers: sbHeaders({ 'Prefer': 'resolution=merge-duplicates,return=minimal' }),
-            body: JSON.stringify([{ sync_code: syncCode, payload: payload, updated_at: new Date().toISOString() }]),
-        });
-        if (!res.ok) throw new Error(await res.text());
-        setCloudStatus('✅ 已同步到云端「' + syncCode + '」', '#43e97b');
+        setCloudStatus('☁️ Syncing...', '#FFD700');
+        const saved = await sbRpc('save_game', { p_code: syncCode, p_payload: payload });
+        if (saved) setCloudStatus('✅ Synced to "' + syncCode + '"', '#43e97b');
+        else setCloudStatus('⚠️ A newer save is in the cloud. Reopen the game to load it', '#ff6b6b');
+        return true;
     } catch (e) {
-        setCloudStatus('⚠️ 同步失败, 稍后自动重试', '#ff6b6b');
+        setCloudStatus('⚠️ Sync failed. Will retry soon', '#ff6b6b');
+        return false;
     }
 }
 
-async function cloudPull() {
-    if (!cloudEnabled()) return null;
-    const res = await fetch(SUPABASE_URL + '/rest/v1/game_saves?sync_code=eq.' + encodeURIComponent(syncCode) + '&select=payload', {
-        headers: sbHeaders(),
-    });
-    if (!res.ok) throw new Error(await res.text());
-    const rows = await res.json();
-    return rows && rows.length ? rows[0].payload : null;
+function cloudPull(code) {
+    return sbRpc('load_save', { p_code: code || syncCode });
 }
 
 // 判断一份存档是否"空白"(无宝物/无投资/无现金) —— 用于防止空数据覆盖有数据
@@ -2648,14 +2720,14 @@ function localLooksEmpty() {
 // 启动时同步 —— 安全规则: 空数据永远不能覆盖非空的一方
 async function cloudSyncOnLoad() {
     if (!cloudEnabled()) return;
-    setCloudStatus('☁️ 检查云端存档...', '#FFD700');
+    setCloudStatus('☁️ Checking cloud save...', '#FFD700');
     try {
         const cloud = await cloudPull();
         const localEmpty = localLooksEmpty();
         // 1) 云端没有或为空白
         if (saveLooksEmpty(cloud)) {
-            if (!localEmpty) { await cloudPush(); setCloudStatus('✅ 已用本机存档初始化云端', '#43e97b'); }
-            else setCloudStatus('云端与本机均为空白', 'rgba(255,255,255,0.55)');
+            if (!localEmpty) { await cloudPush(); setCloudStatus('✅ Cloud save created from this device', '#43e97b'); }
+            else setCloudStatus('No saved progress yet', 'rgba(255,255,255,0.55)');
             return;
         }
         // 2) 云端有有效数据, 本地空白 → 直接采用云端 (无视版本号, 防止残留版本号误判)
@@ -2665,7 +2737,7 @@ async function cloudSyncOnLoad() {
             applyingCloud = false;
             seaSyncVersion = cloud._v || Date.now();
             localStorage.setItem('seaSyncVersion', seaSyncVersion);
-            setCloudStatus('✅ 已载入云端存档', '#43e97b');
+            setCloudStatus('✅ Cloud save loaded', '#43e97b');
             return;
         }
         // 3) 两边都有数据 → 版本新者为准
@@ -2676,81 +2748,153 @@ async function cloudSyncOnLoad() {
             applyingCloud = false;
             seaSyncVersion = cloudV;
             localStorage.setItem('seaSyncVersion', seaSyncVersion);
-            setCloudStatus('✅ 已载入云端最新存档', '#43e97b');
+            setCloudStatus('✅ Latest cloud save loaded', '#43e97b');
         } else if (seaSyncVersion > cloudV) {
             await cloudPush();
         } else {
-            setCloudStatus('✅ 已是最新「' + syncCode + '」', '#43e97b');
+            setCloudStatus('✅ Up to date: "' + syncCode + '"', '#43e97b');
         }
     } catch (e) {
-        setCloudStatus('⚠️ 连接云端失败 (离线也可玩)', '#ff6b6b');
+        setCloudStatus('⚠️ Could not reach the cloud. You can still play offline', '#ff6b6b');
     }
 }
 
-// 手动: 强制把本机存档上传覆盖云端 (本机有进度想推上去时用)
-async function cloudPushManual() {
-    if (!cloudEnabled()) { setCloudStatus('请先设置同步码', '#ff6b6b'); return; }
-    const ok = confirm('把本机存档(' + treasureCollection.length + ' 件宝物, $' + cashBalance + ')上传,覆盖云端「' + syncCode + '」?');
-    if (!ok) return;
-    seaSyncVersion = Date.now();
+// ===== 游戏 key 登录 =====
+function showLoginPanel(name) {
+    document.querySelectorAll('.login-panel').forEach(p => p.classList.remove('active'));
+    document.getElementById('loginPanel' + name).classList.add('active');
+    setLoginMessage('');
+}
+
+function setLoginMessage(text, ok) {
+    const el = document.getElementById('loginMessage');
+    el.textContent = text;
+    el.classList.toggle('ok', !!ok);
+}
+
+function setLoginBusy(busy) {
+    document.querySelectorAll('#login .login-primary').forEach(b => { b.disabled = busy; });
+}
+
+function normalizeKey(value) { return (value || '').trim().toLowerCase(); }
+
+async function accountRequest(body) {
+    const res = await fetch(ACCOUNT_URL, { method: 'POST', headers: sbHeaders(), body: JSON.stringify(body) });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok && !data.error) throw new Error('account ' + res.status);
+    return data;
+}
+
+// 换玩家前先把上一位的本地进度传上去; 失败就不能清本地
+async function flushPreviousPlayer() {
+    if (!lastKey || localLooksEmpty()) return true;
+    syncCode = lastKey;
+    const ok = await cloudPush();
+    syncCode = '';
+    return ok;
+}
+
+// 换玩家时先清空再载入, 避免上一位的数据留在本机
+function loadPlayerSave(key, save) {
+    applyingCloud = true;
+    applySaveObject({
+        treasures: [], cash: 0, withdrawable: 0, investments: [], investHistory: [],
+        dailySolved: 0, lastSettleDate: '', settleHistory: [], totalWithdrawn: 0, expenses: [],
+    });
+    applySaveObject(save);
+    applyingCloud = false;
+    syncCode = key;
+    localStorage.setItem('seaSyncCode', key);
+    seaSyncVersion = save._v || 0;
     localStorage.setItem('seaSyncVersion', seaSyncVersion);
-    await cloudPush();
 }
 
-// 用户在面板里设置/切换同步码
-async function applySyncCode() {
-    if (!cloudConfigured()) { setCloudStatus('⚠️ 未配置 Supabase', '#ff6b6b'); return; }
-    const input = document.getElementById('syncCodeInput');
-    const code = (input.value || '').trim();
-    if (!code) { setCloudStatus('请输入同步码', '#ff6b6b'); return; }
-    syncCode = code;
-    localStorage.setItem('seaSyncCode', syncCode);
+function finishLogin() {
+    setLoginMessage('');
+    runDailySettlement(false);
+    showPage('home');
+}
+
+async function enterWithKey() {
+    const key = normalizeKey(document.getElementById('loginKey').value);
+    if (!KEY_PATTERN.test(key)) { setLoginMessage('Your key has 6-32 lowercase letters, numbers, - or _'); return; }
+    setLoginBusy(true);
+    setLoginMessage('Connecting...', true);
     try {
-        setCloudStatus('☁️ 连接中...', '#FFD700');
-        const cloud = await cloudPull();
-        if (cloud) {
-            applyingCloud = true;
-            applySaveObject(cloud);
-            applyingCloud = false;
-            seaSyncVersion = cloud._v || Date.now();
-            localStorage.setItem('seaSyncVersion', seaSyncVersion);
-            setCloudStatus('✅ 已载入「' + syncCode + '」的云端存档', '#43e97b');
-        } else {
-            seaSyncVersion = Date.now();
-            localStorage.setItem('seaSyncVersion', seaSyncVersion);
-            await cloudPush();
-            setCloudStatus('✅ 已创建并上传到「' + syncCode + '」', '#43e97b');
+        let cloud;
+        try {
+            cloud = await cloudPull(key);
+        } catch (e) {
+            // 离线时只能继续本机上一位玩家的存档
+            if (key !== lastKey) { setLoginMessage('Could not connect. Please try again later'); return; }
+            syncCode = key;
+            finishLogin();
+            return;
         }
-    } catch (e) {
-        setCloudStatus('⚠️ 连接失败, 请检查网络/配置', '#ff6b6b');
+        if (!cloud) { setLoginMessage('Key not found. Check it, or create a new game'); return; }
+        if (key === lastKey) {
+            syncCode = key;
+            await cloudSyncOnLoad();
+        } else {
+            if (!(await flushPreviousPlayer())) { setLoginMessage('The last player\'s progress is not saved yet. Please go online and try again'); return; }
+            loadPlayerSave(key, cloud);
+        }
+        finishLogin();
+    } finally {
+        setLoginBusy(false);
     }
 }
 
-// 手动强制从云端拉取 (覆盖本地)
-async function cloudPullManual() {
-    if (!cloudEnabled()) { setCloudStatus('请先设置同步码', '#ff6b6b'); return; }
+async function createPlayer() {
+    const key = normalizeKey(document.getElementById('createKey').value);
+    const email = document.getElementById('createEmail').value.trim().toLowerCase();
+    if (!KEY_PATTERN.test(key)) { setLoginMessage('Your key needs 6-32 lowercase letters, numbers, - or _'); return; }
+    if (!EMAIL_PATTERN.test(email)) { setLoginMessage('Please enter a valid email'); return; }
+    setLoginBusy(true);
+    setLoginMessage('Creating...', true);
     try {
-        setCloudStatus('☁️ 拉取中...', '#FFD700');
-        const cloud = await cloudPull();
-        if (!cloud) { setCloudStatus('云端暂无此同步码的存档', '#ff6b6b'); return; }
-        applyingCloud = true;
-        applySaveObject(cloud);
-        applyingCloud = false;
-        seaSyncVersion = cloud._v || Date.now();
-        localStorage.setItem('seaSyncVersion', seaSyncVersion);
-        setCloudStatus('✅ 已拉取云端存档', '#43e97b');
+        if (!(await flushPreviousPlayer())) { setLoginMessage('The last player\'s progress is not saved yet. Please go online and try again'); return; }
+        const data = await accountRequest({ action: 'create', key, email });
+        if (data.error === 'taken') { setLoginMessage('This key is taken. Please choose another one'); return; }
+        if (data.error === 'rate_limited') { setLoginMessage('Too many tries today. Please try again tomorrow'); return; }
+        if (data.error) { setLoginMessage('Could not create your game. Please try again later'); return; }
+        loadPlayerSave(key, { version: 2, _v: 0 });
+        document.getElementById('createdKey').textContent = key;
+        showLoginPanel('Created');
+        if (data.emailSent) setLoginMessage('Your key has been sent to your email', true);
+        else setLoginMessage('The email could not be sent. Write down your key now. You can use resend the key later');
     } catch (e) {
-        setCloudStatus('⚠️ 拉取失败', '#ff6b6b');
+        setLoginMessage('Could not connect. Please try again later');
+    } finally {
+        setLoginBusy(false);
     }
 }
 
-// 打开面板时刷新同步码 UI
+async function resendKey() {
+    const email = document.getElementById('resendEmail').value.trim().toLowerCase();
+    if (!EMAIL_PATTERN.test(email)) { setLoginMessage('Please enter a valid email'); return; }
+    setLoginBusy(true);
+    setLoginMessage('Sending...', true);
+    try {
+        const data = await accountRequest({ action: 'resend', email });
+        if (data.error) setLoginMessage('Could not send the email. Please try again later');
+        else setLoginMessage('If this email has a key, we sent it. Please check your inbox and spam folder', true);
+    } catch (e) {
+        setLoginMessage('Could not connect. Please try again later');
+    } finally {
+        setLoginBusy(false);
+    }
+}
+
+async function switchPlayer() {
+    if (cloudPushTimer) { clearTimeout(cloudPushTimer); cloudPushTimer = null; }
+    if (await cloudPush()) location.reload();
+    else setCloudStatus('⚠️ Progress is not uploaded yet. Please go online before switching players', '#ff6b6b');
+}
+
+// 打开面板时显示当前玩家
 function refreshCloudUI() {
-    const input = document.getElementById('syncCodeInput');
-    if (input && !input.value) input.value = syncCode;
-    if (!cloudConfigured()) { setCloudStatus('未配置云同步 (仅本机存档)', 'rgba(255,255,255,0.45)'); return; }
-    if (!syncCode) { setCloudStatus('输入同步码即可跨设备同步', 'rgba(255,255,255,0.55)'); return; }
-    setCloudStatus('当前同步码「' + syncCode + '」', 'rgba(255,255,255,0.7)');
+    setCloudStatus('Current player key: "' + syncCode + '"', 'rgba(255,255,255,0.7)');
 }
 
 // Pause/resume timers when treasure modal opens/closes
@@ -2832,51 +2976,20 @@ document.getElementById('treasureModal').addEventListener('click', function(e) {
 document.getElementById('withdrawDialog').addEventListener('click', function(e) { if(e.target===this) this.classList.remove('show'); });
 
 
-// Migrate old treasure names/imgs to new names in localStorage
-(function migrateTreasureNames() {
-    const nameMap = {
-        'ts1_1':  { name: '彩虹珍珠球',  img: 'treasures/彩虹珍珠球.png' },
-        'ts1_2':  { name: '星标船舵',    img: 'treasures/星标船舵.png' },
-        'ts1_3':  { name: '海星漂流瓶',  img: 'treasures/海星漂流瓶.png' },
-        'ts1_4':  { name: '皮革望远镜',  img: 'treasures/皮革望远镜.png' },
-        'ts1_5':  { name: '粉金海螺',    img: 'treasures/粉金海螺.png' },
-        'ts1_6':  { name: '五彩水晶',    img: 'treasures/五彩水晶.png' },
-        'ts1_7':  { name: '海星金袋',    img: 'treasures/海星金袋.png' },
-        'ts1_8':  { name: '紫贝珠宝箱',  img: 'treasures/紫贝珠宝箱.png' },
-        'ts1_9':  { name: '贝壳钥匙',    img: 'treasures/贝壳钥匙.png' },
-        'ts1_10': { name: '蓝金海星勋章', img: 'treasures/蓝金海星勋章.png' },
-        'ts2_1':  { name: '珊瑚水晶球',  img: 'treasures/珊瑚水晶球.png' },
-        'ts2_2':  { name: '老船舵',      img: 'treasures/老船舵.png' },
-        'ts2_3':  { name: '红绳漂流瓶',  img: 'treasures/红绳漂流瓶.png' },
-        'ts2_4':  { name: '海星望远镜',  img: 'treasures/海星望远镜.png' },
-        'ts2_5':  { name: '金边粉海螺',  img: 'treasures/金边粉海螺.png' },
-        'ts2_6':  { name: '紫水晶',      img: 'treasures/紫水晶.png' },
-        'ts2_7':  { name: '蓝布金袋',    img: 'treasures/蓝布金袋.png' },
-        'ts2_8':  { name: '船锚钥匙',    img: 'treasures/船锚钥匙.png' },
-        'ts2_9':  { name: '宝石海星勋章', img: 'treasures/宝石海星勋章.png' },
-        'ts2_10': { name: '粉贝珠宝箱',  img: 'treasures/粉贝珠宝箱.png' },
-        'ts3_1':  { name: '沉船舵轮',    img: 'treasures/沉船舵轮.png' },
-        'ts3_2':  { name: '珊瑚漂流瓶',  img: 'treasures/珊瑚漂流瓶.png' },
-        'ts3_3':  { name: '金光水晶球',  img: 'treasures/金光水晶球.png' },
-        'ts3_4':  { name: '蓝紫水晶',    img: 'treasures/蓝紫水晶.png' },
-        'ts3_5':  { name: '船锚金袋',    img: 'treasures/船锚金袋.png' },
-        'ts3_6':  { name: '黑金望远镜',  img: 'treasures/黑金望远镜.png' },
-        'ts3_7':  { name: '紫珠海螺',    img: 'treasures/紫珠海螺.png' },
-        'ts3_8':  { name: '海星勋章',    img: 'treasures/海星勋章.png' },
-        'ts3_9':  { name: '紫贝宝盒',    img: 'treasures/紫贝宝盒.png' },
-        'ts3_10': { name: '船锚古钥匙',  img: 'treasures/船锚古钥匙.png' },
-    };
+// 存档里的物品名是收集时写入的, 载入后按 id 换成当前目录的名字 (同时修正旧版宝藏图片路径)
+function localizeSavedItems() {
+    const catalog = new Map([...SEA_ANIMALS, ...SEA_TREASURES].map(item => [item.id, item]));
     let changed = false;
     treasureCollection.forEach(item => {
-        const mapping = nameMap[item.id];
-        if (mapping && (item.name !== mapping.name || item.img !== mapping.img)) {
-            item.name = mapping.name;
-            item.img = mapping.img;
-            changed = true;
-        }
+        const entry = catalog.get(item.id);
+        const name = entry ? entry.name : item.id;
+        if (!entry && !/[^\x00-\x7F]/.test(item.name || '')) return;
+        if (item.name !== name) { item.name = name; changed = true; }
+        if (entry && item.id.startsWith('ts') && item.img !== entry.img) { item.img = entry.img; changed = true; }
     });
-    if (changed) saveTreasures();
-})();
+    return changed;
+}
+if (localizeSavedItems()) saveTreasures();
 
 // Init treasure box on load
 updateTreasureBoxUI();
@@ -2886,13 +2999,8 @@ document.getElementById('settleModal').addEventListener('click', function(e) {
     if (e.target === this) this.classList.remove('show');
 });
 
-// 启动流程: 先从云端同步最新存档(若已配置同步码), 再做每日结算
-(async function initLoad() {
-    if (cloudEnabled()) {
-        try { await cloudSyncOnLoad(); } catch (e) {}
-    }
-    runDailySettlement(false);
-})();
+// 启动流程: 预填上次的 key; 同步和每日结算在进入游戏后执行
+document.getElementById('loginKey').value = lastKey;
 </script>
 </body>
 </html>
