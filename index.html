@@ -751,6 +751,16 @@
 </div>
 
 <!-- Daily settlement modal -->
+<div class="treasure-modal" id="conflictModal" style="z-index:470">
+    <div class="treasure-modal-card" style="max-width:420px">
+        <div class="treasure-modal-title">&#9729;&#65039; Game Updated</div>
+        <div style="color:rgba(255,255,255,0.85);margin:15px 0;font-size:0.95rem;line-height:1.6">This game was played on another device. Reload to get the latest progress.</div>
+        <div style="display:flex;gap:10px;justify-content:center;margin-top:15px">
+            <button class="treasure-close-btn" onclick="location.reload()">Reload</button>
+        </div>
+    </div>
+</div>
+
 <div class="treasure-modal" id="settleModal" style="z-index:460">
     <div class="treasure-modal-card" style="max-width:480px">
         <div class="treasure-modal-title">&#127748; Daily Report</div>
@@ -2649,6 +2659,11 @@ let syncCode = '';   // 进入游戏后才赋值, 在此之前不会上传
 let seaSyncVersion = parseInt(localStorage.getItem('seaSyncVersion') || '0');
 let applyingCloud = false;   // 拉取应用云端数据时为 true, 防止回写造成循环
 let cloudPushTimer = null;
+let cloudBaseVersion = parseInt(localStorage.getItem('seaCloudBase') || '0'); // 本机最后确认与云端一致的版本
+let cloudPushing = null;     // 进行中的上传, 同一时间只有一个, 否则第二个会被当成冲突
+let cloudRetryTimer = null;
+let cloudChecking = false;
+let cloudConflict = false;   // 云端已被其他设备更新, 停止上传直到重新载入
 
 function cloudConfigured() { return !!(SUPABASE_URL && SUPABASE_ANON_KEY); }
 function cloudEnabled() { return cloudConfigured() && !!syncCode; }
@@ -2678,28 +2693,99 @@ function setCloudStatus(text, color) {
 
 // 本地数据有变化时调用: 提升版本号并防抖上传
 function scheduleCloudPush() {
-    if (applyingCloud || !cloudEnabled()) return;
+    if (applyingCloud || !cloudEnabled() || cloudConflict) return;
     seaSyncVersion = Date.now();
     localStorage.setItem('seaSyncVersion', seaSyncVersion);
     if (cloudPushTimer) clearTimeout(cloudPushTimer);
     cloudPushTimer = setTimeout(cloudPush, 1500);
 }
 
-async function cloudPush() {
-    if (!cloudEnabled()) return false;
+function setSyncVersions(local, base) {
+    seaSyncVersion = local;
+    cloudBaseVersion = base;
+    localStorage.setItem('seaSyncVersion', local);
+    localStorage.setItem('seaCloudBase', base);
+}
+
+function hasUnsyncedChanges() { return seaSyncVersion !== cloudBaseVersion; }
+
+async function pushSaveOnce() {
+    const version = seaSyncVersion;
     const payload = buildSaveObject();
-    payload._v = seaSyncVersion;
+    payload._v = version;
     try {
-        setCloudStatus('☁️ Syncing...', '#FFD700');
-        const saved = await sbRpc('save_game', { p_code: syncCode, p_payload: payload });
-        if (saved) setCloudStatus('✅ Synced to "' + syncCode + '"', '#43e97b');
-        else setCloudStatus('⚠️ A newer save is in the cloud. Reopen the game to load it', '#ff6b6b');
-        return true;
+        const saved = await sbRpc('save_game_if', { p_code: syncCode, p_base_v: cloudBaseVersion, p_payload: payload });
+        if (!saved) return 'conflict';
+        cloudBaseVersion = version;
+        localStorage.setItem('seaCloudBase', version);
+        return 'ok';
     } catch (e) {
-        setCloudStatus('⚠️ Sync failed. Will retry soon', '#ff6b6b');
-        return false;
+        return 'failed';
     }
 }
+
+async function cloudPush() {
+    if (!cloudEnabled() || cloudConflict) return false;
+    if (cloudPushTimer) { clearTimeout(cloudPushTimer); cloudPushTimer = null; }
+    if (cloudRetryTimer) { clearTimeout(cloudRetryTimer); cloudRetryTimer = null; }
+    setCloudStatus('☁️ Syncing...', '#FFD700');
+    while (cloudPushing) await cloudPushing;
+    cloudPushing = pushSaveOnce();
+    const result = await cloudPushing;
+    cloudPushing = null;
+    if (result === 'ok') setCloudStatus('✅ Synced to "' + syncCode + '"', '#43e97b');
+    else if (result === 'conflict') showCloudConflict();
+    else {
+        setCloudStatus('⚠️ Sync failed. Will retry soon', '#ff6b6b');
+        cloudRetryTimer = setTimeout(cloudPush, 30000);
+    }
+    return result === 'ok';
+}
+
+// 被云端覆盖前留一份本机进度, 需要时可以手动恢复
+function keepConflictBackup() {
+    if (!hasUnsyncedChanges()) return;
+    try {
+        localStorage.setItem('seaConflictBackup', JSON.stringify({ key: syncCode, save: buildSaveObject() }));
+    } catch (e) {}
+}
+
+function showCloudConflict() {
+    cloudConflict = true;
+    if (cloudPushTimer) { clearTimeout(cloudPushTimer); cloudPushTimer = null; }
+    keepConflictBackup();
+    document.getElementById('conflictModal').classList.add('show');
+}
+
+function applyCloudSave(cloud) {
+    applyingCloud = true;
+    applySaveObject(cloud);
+    applyingCloud = false;
+    setSyncVersions(cloud._v || 0, cloud._v || 0);
+}
+
+// 回到前台或恢复联网: 有未上传的进度就上传, 否则载入其他设备的更新
+async function checkCloudOnResume() {
+    if (!cloudEnabled() || cloudConflict || document.hidden || cloudChecking) return;
+    cloudChecking = true;
+    try {
+        if (hasUnsyncedChanges()) { await cloudPush(); return; }
+        const cloud = await cloudPull();
+        if (!cloud || (cloud._v || 0) === cloudBaseVersion || hasUnsyncedChanges()) return;
+        applyCloudSave(cloud);
+        showFeedback('Updated from another device');
+    } catch (e) {
+    } finally {
+        cloudChecking = false;
+    }
+}
+
+document.addEventListener('visibilitychange', () => {
+    if (!document.hidden) checkCloudOnResume();
+    else if (cloudPushTimer) cloudPush();
+});
+window.addEventListener('pageshow', (e) => { if (e.persisted) checkCloudOnResume(); });
+window.addEventListener('online', checkCloudOnResume);
 
 function cloudPull(code) {
     return sbRpc('load_save', { p_code: code || syncCode });
@@ -2726,33 +2812,34 @@ async function cloudSyncOnLoad() {
         const localEmpty = localLooksEmpty();
         // 1) 云端没有或为空白
         if (saveLooksEmpty(cloud)) {
-            if (!localEmpty) { await cloudPush(); setCloudStatus('✅ Cloud save created from this device', '#43e97b'); }
-            else setCloudStatus('No saved progress yet', 'rgba(255,255,255,0.55)');
+            if (!localEmpty) {
+                setSyncVersions(Date.now(), (cloud && cloud._v) || 0);
+                await cloudPush();
+            } else {
+                setSyncVersions((cloud && cloud._v) || 0, (cloud && cloud._v) || 0);
+                setCloudStatus('No saved progress yet', 'rgba(255,255,255,0.55)');
+            }
             return;
         }
         // 2) 云端有有效数据, 本地空白 → 直接采用云端 (无视版本号, 防止残留版本号误判)
         if (localEmpty) {
-            applyingCloud = true;
-            applySaveObject(cloud);
-            applyingCloud = false;
-            seaSyncVersion = cloud._v || Date.now();
-            localStorage.setItem('seaSyncVersion', seaSyncVersion);
+            applyCloudSave(cloud);
             setCloudStatus('✅ Cloud save loaded', '#43e97b');
             return;
         }
-        // 3) 两边都有数据 → 版本新者为准
+        // 3) 两边都有数据: 云端没变就上传本机进度; 云端变过则以云端为准
         const cloudV = cloud._v || 0;
-        if (cloudV > seaSyncVersion) {
-            applyingCloud = true;
-            applySaveObject(cloud);
-            applyingCloud = false;
-            seaSyncVersion = cloudV;
-            localStorage.setItem('seaSyncVersion', seaSyncVersion);
-            setCloudStatus('✅ Latest cloud save loaded', '#43e97b');
-        } else if (seaSyncVersion > cloudV) {
+        // 旧版本地没有记录基准版本时, 按时间推断
+        if (!cloudBaseVersion) cloudBaseVersion = seaSyncVersion > cloudV ? cloudV : seaSyncVersion;
+        if (cloudV === seaSyncVersion) {
+            setSyncVersions(cloudV, cloudV);
+            setCloudStatus('✅ Up to date: "' + syncCode + '"', '#43e97b');
+        } else if (cloudV === cloudBaseVersion) {
             await cloudPush();
         } else {
-            setCloudStatus('✅ Up to date: "' + syncCode + '"', '#43e97b');
+            keepConflictBackup();
+            applyCloudSave(cloud);
+            setCloudStatus('✅ Latest cloud save loaded', '#43e97b');
         }
     } catch (e) {
         setCloudStatus('⚠️ Could not reach the cloud. You can still play offline', '#ff6b6b');
@@ -2787,11 +2874,12 @@ async function accountRequest(body) {
 
 // 换玩家前先把上一位的本地进度传上去; 失败就不能清本地
 async function flushPreviousPlayer() {
-    if (!lastKey || localLooksEmpty()) return true;
+    if (!lastKey || localLooksEmpty() || !hasUnsyncedChanges()) return true;
     syncCode = lastKey;
-    const ok = await cloudPush();
+    const result = await pushSaveOnce();
+    if (result === 'conflict') keepConflictBackup();
     syncCode = '';
-    return ok;
+    return result !== 'failed';
 }
 
 // 换玩家时先清空再载入, 避免上一位的数据留在本机
@@ -2805,8 +2893,7 @@ function loadPlayerSave(key, save) {
     applyingCloud = false;
     syncCode = key;
     localStorage.setItem('seaSyncCode', key);
-    seaSyncVersion = save._v || 0;
-    localStorage.setItem('seaSyncVersion', seaSyncVersion);
+    setSyncVersions(save._v || 0, save._v || 0);
 }
 
 function finishLogin() {
@@ -2889,9 +2976,8 @@ async function resendKey() {
 }
 
 async function switchPlayer() {
-    if (cloudPushTimer) { clearTimeout(cloudPushTimer); cloudPushTimer = null; }
     if (await cloudPush()) location.reload();
-    else setCloudStatus('⚠️ Progress is not uploaded yet. Please go online before switching players', '#ff6b6b');
+    else if (!cloudConflict) setCloudStatus('⚠️ Progress is not uploaded yet. Please go online before switching players', '#ff6b6b');
 }
 
 // 打开面板时显示当前玩家
