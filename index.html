@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>Under the Sea</title>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;700;900&display=swap');
@@ -548,6 +548,64 @@
             100% { transform: scale(0.3) translateY(-120px) rotate(40deg); opacity: 0; }
         }
 
+
+        /* ===== PHONE LANDSCAPE ===== */
+        @media (orientation: landscape) and (max-height: 500px) {
+            body, .page, .game-page, .feedback, .lost-item-big, .treasure-modal { height: 100dvh; }
+
+            /* Login and home */
+            #login, #home { justify-content: flex-start; overflow-y: auto; padding: 8px 16px; }
+            #login > :first-child, #home .home-title { margin-top: auto; }
+            .login-card, .practice-options { margin-bottom: auto; }
+            .mascot, #login .home-subtitle { display: none; }
+            .home-title { font-size: 1.8rem; margin-bottom: 4px; animation: none; }
+            .home-subtitle { font-size: 0.95rem; margin-bottom: 12px; }
+            .practice-card { width: 210px; height: 170px; padding: 12px; }
+            .practice-card .card-icon { font-size: 2.2rem; margin-bottom: 6px; }
+            .login-card { max-width: 460px; padding: 12px 20px; border-radius: 18px; }
+            .login-panel { gap: 6px; }
+            .login-panel input { padding: 7px 12px; font-size: 16px; }
+            .login-primary { padding: 8px; font-size: 1rem; }
+            .login-hint { font-size: 0.75rem; }
+            #loginMessage { margin-top: 4px; font-size: 0.85rem; }
+
+            /* Game */
+            .back-btn { top: 8px; left: max(8px, env(safe-area-inset-left)); width: 40px; height: 40px; }
+            .back-btn::after { top: -8px; left: -8px; width: 56px; height: 56px; }
+            .game-hud { top: 8px; padding: 0 90px; }
+            .hud-bar { padding: 4px 14px; gap: 14px; font-size: 0.8rem; }
+            .sea-timer { top: 52px; left: max(4px, env(safe-area-inset-left)); width: 84px; height: 84px; }
+            .sea-timer-num { font-size: 1.15rem; letter-spacing: 0; }
+            .treasure-box-btn { top: 6px; right: max(10px, env(safe-area-inset-right)); width: 54px; height: 54px; }
+            .game-question { bottom: max(6px, env(safe-area-inset-bottom)); }
+            .sea-options { gap: 8px; }
+            .sea-opt { min-width: 46px; height: 42px; }
+            .sea-pick-hint { font-size: 1rem; padding: 6px 16px; }
+            .feedback-content { font-size: 3rem; }
+            .lost-item-big img { width: 80px; height: 80px; }
+            .lost-item-big .lost-text { font-size: 1.1rem; }
+
+            /* Modals */
+            .treasure-modal-card {
+                /* 两侧留空, 避开左上角返回按钮 */
+                width: 100%; max-width: min(780px, calc(100vw - 124px)); max-height: 96dvh;
+                padding: 8px 14px; border-radius: 18px; border-width: 2px;
+            }
+            .treasure-modal-title { font-size: 1.2rem; }
+            .treasure-modal-subtitle { display: none; }
+            .tab-btn { padding: 5px 6px !important; font-size: 0.8rem !important; }
+            .treasure-grid { grid-template-columns: repeat(6, 1fr); gap: 8px; margin-bottom: 10px; }
+            .treasure-grid-item { padding: 6px; min-height: 0; border-radius: 10px; }
+            .treasure-grid-item img { width: 44px; height: 44px; }
+            .treasure-close-btn { padding: 7px 20px; font-size: 0.85rem; }
+            .wallet-stats { grid-template-columns: repeat(3, 1fr) !important; gap: 8px !important; margin-bottom: 10px !important; }
+            .wallet-stat { padding: 7px 10px; border-radius: 10px; }
+            .wallet-stat .wlbl { font-size: 0.75rem; margin-bottom: 2px; }
+            .wallet-stat .wval { font-size: 1.15rem; }
+            .stock-card { padding: 7px 10px; margin-bottom: 6px; }
+            /* iOS 会放大字号小于 16px 的输入框 */
+            .wallet-input, .stock-input, #withdrawInput { font-size: 16px; }
+        }
     </style>
 </head>
 <body>
@@ -694,7 +752,7 @@
         </div>
         <!-- Wallet tab -->
         <div id="walletTabContent" style="display:none">
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px">
+            <div class="wallet-stats" style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px">
                 <div class="wallet-stat"><div class="wlbl">&#128091; Wallet balance</div><div class="wval" id="walletBalanceDisp" style="color:#FFD700">$0</div></div>
                 <div class="wallet-stat"><div class="wlbl">&#127975; Total withdrawn</div><div class="wval" id="walletWithdrawnDisp" style="color:#4FC3F7">$0</div></div>
                 <div class="wallet-stat"><div class="wlbl">&#128176; Total earned</div><div class="wval" id="walletIncomeDisp" style="color:#69f0ae">$0</div></div>
@@ -789,6 +847,10 @@ let seaAnimTimers = [];
 let treasureCollection = JSON.parse(localStorage.getItem('seaTreasures') || '[]');
 
 // ===== SEA ASSET DATA =====
+// 手机横屏高度只有约 400px, 生物和宝藏按比例缩小
+const phoneLandscape = window.matchMedia('(orientation: landscape) and (max-height: 500px)');
+function sceneScale() { return phoneLandscape.matches ? 0.6 : 1; }
+
 // Sea animals (new set): facing, type (swim/seahorse/floor/jellyfish), sizeRange, speed, topRange
 // topRange capped at 70% to avoid overlapping the bottom question area (~15% height)
 const SEA_ANIMALS = [
@@ -1085,7 +1147,7 @@ function createSwimmer(item, container, delay) {
     div.dataset.itemId = item.id;
     div.dataset.itemName = item.name;
     div.dataset.itemImg = item.img;
-    const size = Math.round(randRange(item.sizeRange[0], item.sizeRange[1]));
+    const size = Math.round(randRange(item.sizeRange[0], item.sizeRange[1]) * sceneScale());
     div.style.height = size + 'px';
     const tr = item.topRange || [20, 55];
     div.style.top = randRange(tr[0], tr[1]) + '%';
@@ -1133,12 +1195,12 @@ function createFloorCreature(item, container) {
     div.dataset.itemId = item.id;
     div.dataset.itemName = item.name;
     div.dataset.itemImg = item.img;
-    const size = Math.round(randRange(item.sizeRange[0], item.sizeRange[1]));
+    const size = Math.round(randRange(item.sizeRange[0], item.sizeRange[1]) * sceneScale());
     div.style.height = size + 'px';
     const dur = randRange(item.speed[0], item.speed[1]);
     div.style.animationDuration = dur + 's';
 
-    const qAreaH = 120;
+    const qAreaH = 120 * sceneScale();
     const isMagic = MAGIC_IDS.includes(item.id);
 
     if (isMagic) {
@@ -1252,7 +1314,7 @@ function spawnTreasure(container) {
     // Trident (treasure2, ts*_2 pattern) gets 3x size, others 2x
     const isTrident = item.id.endsWith('_2') || item.id === 'treasure2';
     const baseSz = 50 + Math.random() * 20; // 50-70px
-    const sz = isTrident ? baseSz * 1.5 : baseSz;
+    const sz = (isTrident ? baseSz * 1.5 : baseSz) * sceneScale();
     div.style.height = sz + 'px';
     div.style.left = pos.left;
     div.style.bottom = pos.bottom;
@@ -2191,7 +2253,7 @@ function renderInvestTab() {
     html += `<div class="stock-card" style="flex-wrap:wrap">
         <div class="stock-name">&#128176; Savings account</div>
         <div style="color:rgba(255,255,255,0.7);font-size:0.8rem">${SAVINGS_RATE*100}% a year, added daily</div>
-        <input type="number" class="stock-input" id="savingsInput" min="1" step="1" placeholder="Amount" oninput="updateSavingsPreview()">
+        <input type="number" class="stock-input" id="savingsInput" min="1" step="1" placeholder="$" oninput="updateSavingsPreview()">
         <button class="stock-buy-btn" onclick="depositSavings()">Deposit</button>
         <div id="savingsPreview" style="width:100%;color:#4CAF50;font-size:0.78rem;margin-top:6px;min-height:18px"></div>
     </div>`;
