@@ -619,7 +619,7 @@
             <span class="card-icon">&#10133;&#10134;</span>Addition &amp; Subtraction<span class="card-desc">Numbers up to 99, plus multiplying up to 5</span>
         </button>
         <button class="practice-card mul" onclick="startSea('mul')">
-            <span class="card-icon">&#10006;</span>Times Tables<span class="card-desc">Times tables 1 to 4</span>
+            <span class="card-icon">&#10006;</span>Times Tables<span class="card-desc">Times tables 1 to 9</span>
         </button>
     </div>
 </div>
@@ -682,8 +682,8 @@
         <div style="display:flex;flex-wrap:wrap;justify-content:center;gap:8px 16px;margin-bottom:12px;font-size:0.85rem">
             <span style="color:white;font-weight:700" title="Cash plus investment value">&#128176; Total: $<span id="totalValueDisplay">0</span></span>
             <span id="totalPnlDisplay" style="font-weight:700" title="Savings interest plus stock gains">&#128200; Total P&L: $0</span>
-            <span style="color:#4CAF50;font-weight:700">&#128181; To invest: $<span id="cashDisplay">0</span></span>
-            <span style="color:#FFD700;font-weight:700;cursor:pointer;text-decoration:underline" onclick="showWithdraw()" title="Realized gains you can withdraw">&#128179; Can withdraw: $<span id="withdrawableDisplay">0</span></span>
+            <span style="color:#4CAF50;font-weight:700">&#128181; Investable: $<span id="cashDisplay">0</span></span>
+            <span style="color:#FFD700;font-weight:700;cursor:pointer;text-decoration:underline" onclick="showWithdraw()" title="Realized gains you can withdraw">&#128179; Withdrawable: $<span id="withdrawableDisplay">0</span></span>
         </div>
         <div class="treasure-modal-subtitle" id="treasureModalSubtitle"></div>
         <!-- Items tab -->
@@ -741,7 +741,7 @@
 <div class="treasure-modal" id="withdrawDialog" style="z-index:450">
     <div class="treasure-modal-card" style="max-width:350px">
         <div class="treasure-modal-title">&#128179; Withdraw</div>
-        <div style="color:rgba(255,255,255,0.7);margin-bottom:15px">Available to withdraw: $<span id="withdrawMax">0</span></div>
+        <div style="color:rgba(255,255,255,0.7);margin-bottom:15px">Withdrawable: $<span id="withdrawMax">0</span></div>
         <input type="number" id="withdrawInput" min="0" step="1" placeholder="Amount to withdraw" style="width:100%;padding:12px;border-radius:12px;border:2px solid rgba(255,215,0,0.3);background:rgba(255,255,255,0.1);color:white;font-size:1.1rem;text-align:center;font-family:'Nunito',sans-serif;outline:none;margin-bottom:15px">
         <div style="display:flex;gap:10px;justify-content:center">
             <button class="treasure-close-btn" style="background:#f0f0f0;color:#666" onclick="document.getElementById('withdrawDialog').classList.remove('show')">Cancel</button>
@@ -870,7 +870,7 @@ function showPage(pageId) {
 function generateQuestion(type, forceCarry) {
     let a, b, op, answer, hasCarry = false;
     if (type === 'mul') {
-        a = Math.floor(Math.random() * 4) + 1; b = Math.floor(Math.random() * 9) + 1;
+        a = Math.floor(Math.random() * 9) + 1; b = Math.floor(Math.random() * 9) + 1;
         op = '\u00d7'; answer = a * b;
     } else if (type === 'add' || (type === 'mix' && Math.random() < 0.5)) {
         if (forceCarry) {
@@ -2120,7 +2120,7 @@ function renderTreasureGrid() {
         if (!grouped[item.id]) grouped[item.id] = { ...item, count: 0 };
         grouped[item.id].count++;
     });
-    subtitle.textContent = `Treasures: ${treasureCollection.length} | To invest: $${Math.floor(cashBalance)}`;
+    subtitle.textContent = `Treasures: ${treasureCollection.length} | Investable: $${Math.floor(cashBalance)}`;
 
     function renderSection(title, emoji, slotOrder, colorAccent) {
         const items = slotOrder.filter(id => grouped[id]);
@@ -2557,7 +2557,7 @@ function showSettlementModal(result) {
         html += '</div>';
     }
     if (result.cashLoss > 0) {
-        html += '<div style="color:#ffa500;font-weight:700;margin-bottom:6px">&#128201; Your money to invest went down by $' + result.cashLoss + '</div>';
+        html += '<div style="color:#ffa500;font-weight:700;margin-bottom:6px">&#128201; Your investable money went down by $' + result.cashLoss + '</div>';
         html += '<div style="color:rgba(255,255,255,0.6);font-size:0.85rem">($' + result.cashBefore + ' &rarr; $' + result.cashAfter + ', drops ' + Math.round(CASH_DEFLATION * 100) + '% every midnight)</div>';
     }
     if (!html) return;
@@ -2877,8 +2877,10 @@ async function resendKey() {
     setLoginMessage('Sending...', true);
     try {
         const data = await accountRequest({ action: 'resend', email });
-        if (data.error) setLoginMessage('Could not send the email. Please try again later');
-        else setLoginMessage('If this email has a key, we sent it. Please check your inbox and spam folder', true);
+        if (data.error === 'not_found') setLoginMessage('User not found');
+        else if (data.error === 'rate_limited') setLoginMessage('Too many tries. Please wait a while and try again');
+        else if (data.error) setLoginMessage('Could not send the email. Please try again later');
+        else setLoginMessage('Email sent. Please check your inbox and spam folder', true);
     } catch (e) {
         setLoginMessage('Could not connect. Please try again later');
     } finally {
